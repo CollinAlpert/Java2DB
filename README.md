@@ -43,11 +43,11 @@ public class Person extends BaseEntity {
 	
 	private String name;
 	
-	// The number only needs to correspond with the number of the foreign key object.
-        // That way Java2DB will know from which foreign key to fill this entity from. 
+	// The number only needs to correspond with the number of the foreign key object. 
 	@ForeignKey(1)   
 	private int genderId;
 	
+	// That way Java2DB will know from which foreign key to fill this Gender entity from.
 	@ForeignKeyObject(1)
 	private Gender gender;
 	
