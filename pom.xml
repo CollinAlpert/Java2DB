@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>de.collin</groupId>
-    <artifactId>servicepattern</artifactId>
+    <artifactId>java2db</artifactId>
     <version>1.0</version>
     <developers>
         <developer>
@@ -42,54 +42,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <build>
-        <finalName>${project.artifactId}-${project.version}</finalName>
-        <!--TO BUILD JAR USE: mvn clean compile assembly:single-->
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <mainClass>Main</mainClass>
-                            </manifest>
-                        </archive>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <configuration>
-                        <source>${jdk.version}</source>
-                        <target>${jdk.version}</target>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>single</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <mainClass>Main</mainClass>
-                            </manifest>
-                        </archive>
-                        <descriptorRefs>
-                            <descriptorRef>jar-with-dependencies</descriptorRef>
-                        </descriptorRefs>
-                        <appendAssemblyId>false</appendAssemblyId>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 </project>

@@ -2,7 +2,8 @@
 This little badboy allows you to access your 
 database without writing a single line of SQL in your application.
 
-**Please note:** This library is not suitable for projects requiring complex SQL queries. 
+**Please note:** This is a Java 10 library. Make sure you have Java 10 installed when using this library. 
+This library is not suitable for projects requiring complex SQL queries. 
 It is meant for smaller projects which want to interact with their database in a simple, 
 but easy way without bloating the source code with SQL queries.
 
