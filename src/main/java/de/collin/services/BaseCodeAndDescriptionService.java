@@ -7,9 +7,9 @@ import java.util.List;
 /**
  * @author Collin Alpert
  */
-public abstract class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntity> extends BaseService<T> {
+public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntity> extends BaseService<T> {
 
-	public BaseCodeAndDescriptionService(Class<T> clazz) {
+	protected BaseCodeAndDescriptionService(Class<T> clazz) {
 		super(clazz);
 	}
 

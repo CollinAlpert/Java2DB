@@ -6,7 +6,6 @@ import de.collin.services.BaseService;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Predicate;
 
 /**
  * @author Collin Alpert
@@ -14,11 +13,9 @@ import java.util.function.Predicate;
 public class IoC {
 
 	private static Map<Class<? extends BaseEntity>, BaseService<?>> services;
-	private static Map<Class<? extends BaseEntity>, Predicate<? extends BaseEntity>> defaultConstraints;
 
 	static {
 		services = new HashMap<>();
-		defaultConstraints = new HashMap<>();
 	}
 
 	public static <T> T resolve(Class<T> clazz) {
