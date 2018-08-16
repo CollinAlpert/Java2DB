@@ -1,6 +1,6 @@
-package de.collin.services;
+package de.java2db.services;
 
-import de.collin.entities.BaseCodeAndDescriptionEntity;
+import de.java2db.entities.BaseCodeAndDescriptionEntity;
 
 import java.util.List;
 

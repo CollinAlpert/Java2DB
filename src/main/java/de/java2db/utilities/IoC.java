@@ -1,7 +1,7 @@
-package de.collin.utilities;
+package de.java2db.utilities;
 
-import de.collin.entities.BaseEntity;
-import de.collin.services.BaseService;
+import de.java2db.entities.BaseEntity;
+import de.java2db.services.BaseService;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;

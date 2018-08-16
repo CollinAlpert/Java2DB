@@ -1,13 +1,13 @@
-package de.collin.services;
+package de.java2db.services;
 
-import de.collin.database.DBConnection;
-import de.collin.database.TableName;
-import de.collin.entities.BaseEntity;
-import de.collin.mappers.BaseMapper;
-import de.collin.utilities.EmptyResultSetException;
-import de.collin.utilities.Lambda2Sql;
-import de.collin.utilities.SqlPredicate;
-import de.collin.utilities.Utilities;
+import de.java2db.database.DBConnection;
+import de.java2db.database.TableName;
+import de.java2db.entities.BaseEntity;
+import de.java2db.mappers.BaseMapper;
+import de.java2db.utilities.EmptyResultSetException;
+import de.java2db.utilities.Lambda2Sql;
+import de.java2db.utilities.SqlPredicate;
+import de.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;

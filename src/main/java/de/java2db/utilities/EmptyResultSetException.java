@@ -1,4 +1,4 @@
-package de.collin.utilities;
+package de.java2db.utilities;
 
 /**
  * @author Collin Alpert

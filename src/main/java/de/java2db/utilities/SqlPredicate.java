@@ -1,4 +1,4 @@
-package de.collin.utilities;
+package de.java2db.utilities;
 
 import java.io.Serializable;
 import java.util.function.Predicate;

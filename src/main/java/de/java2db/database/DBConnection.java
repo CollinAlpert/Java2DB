@@ -1,4 +1,4 @@
-package de.collin.database;
+package de.java2db.database;
 
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;

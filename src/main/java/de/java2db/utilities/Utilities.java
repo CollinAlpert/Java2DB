@@ -1,7 +1,7 @@
-package de.collin.utilities;
+package de.java2db.utilities;
 
-import de.collin.database.ForeignKeyObject;
-import de.collin.entities.BaseEntity;
+import de.java2db.database.ForeignKeyObject;
+import de.java2db.entities.BaseEntity;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;

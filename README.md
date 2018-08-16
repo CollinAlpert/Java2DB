@@ -1,6 +1,9 @@
 # Java2DB
 This little badboy allows you to access your 
-database without writing a single line of SQL in your application.
+database without writing a single line of SQL in your application.\
+While this library may not offer the most fancy features or allow 
+you to fire huge queries to your database, that is not what it is intended for. 
+It is lightweight and meant for a quick and simple access to your database.
 
 **Please note:** This is a Java 10 library. Make sure you have Java 10 installed when using this library. 
 This library is not suitable for projects requiring complex SQL queries. 

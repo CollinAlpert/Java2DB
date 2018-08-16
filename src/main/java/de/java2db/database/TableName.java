@@ -1,4 +1,4 @@
-package de.collin.database;
+package de.java2db.database;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
