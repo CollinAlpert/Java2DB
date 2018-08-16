@@ -70,52 +70,35 @@ public class BaseService<T extends BaseEntity> {
 
 	//region Read
 
-	//TODO remove duplicate code by finding bug corresponding to SQLException
+	protected ResultSet getByPredicate(SqlPredicate<T> predicate, DBConnection connection) {
+		var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
+		System.out.println(query);
+		ResultSet set = connection.execute(query);
+		if (isResultSetEmpty(set))
+			throw new EmptyResultSetException(String.format("No entry found for query of type %s.", typeName));
+		return set;
+	}
+
 	public T getSingle(SqlPredicate<T> predicate) {
-		try (var connection = new DBConnection()) {
-			var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
-			System.out.println(query);
-			ResultSet set = connection.execute(query);
-			if (isResultSetEmpty(set))
-				throw new EmptyResultSetException(String.format("No entry found for query of type %s.", typeName));
-			return mapper.map(set);
-		}
+		var connection = new DBConnection();
+		var entity = mapper.map(getByPredicate(predicate, connection));
+		connection.close();
+		return entity;
 	}
 
-	//TODO remove duplicate code by finding bug corresponding to SQLException
 	public List<T> getMultiple(SqlPredicate<T> predicate) {
-		try (var connection = new DBConnection()) {
-			var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
-			System.out.println(query);
-			ResultSet set = connection.execute(query);
-			if (isResultSetEmpty(set))
-				throw new EmptyResultSetException(String.format("No entry found for query of type %s.", typeName));
-			return mapper.mapToList(set);
-		}
+		var connection = new DBConnection();
+		var entity = mapper.mapToList(getByPredicate(predicate, connection));
+		connection.close();
+		return entity;
 	}
 
-	//TODO remove duplicate code by finding bug corresponding to SQLException
 	public T getById(int id) {
-		try (var connection = new DBConnection()) {
-			var query = "select * from " + tableName + " where id=?";
-			System.out.println(query);
-			ResultSet set = connection.execute(query, id);
-			if (isResultSetEmpty(set))
-				throw new EmptyResultSetException(String.format("No entry found for query of type %s.", typeName));
-			return mapper.map(set);
-		}
+		return getSingle(x -> x.getId() == id);
 	}
 
-	//TODO remove duplicate code by finding bug corresponding to SQLException
 	public List<T> getAll() {
-		try (var connection = new DBConnection()) {
-			var query = "select * from " + tableName;
-			System.out.println(query);
-			ResultSet set = connection.execute(query);
-			if (isResultSetEmpty(set))
-				throw new EmptyResultSetException(String.format("No entry found for query of type %s.", typeName));
-			return mapper.mapToList(set);
-		}
+		return getMultiple(x -> true);
 	}
 	//endregion
 
