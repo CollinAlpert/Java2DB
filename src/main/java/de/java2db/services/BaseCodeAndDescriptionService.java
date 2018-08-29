@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntity> extends BaseService<T> {
 
-	protected BaseCodeAndDescriptionService(Class<T> clazz) {
+	public BaseCodeAndDescriptionService(Class<T> clazz) {
 		super(clazz);
 	}
 

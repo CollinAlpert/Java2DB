@@ -4,14 +4,12 @@ import de.java2db.database.DBConnection;
 import de.java2db.database.TableName;
 import de.java2db.entities.BaseEntity;
 import de.java2db.mappers.BaseMapper;
-import de.java2db.utilities.EmptyResultSetException;
 import de.java2db.utilities.Lambda2Sql;
 import de.java2db.utilities.SqlPredicate;
 import de.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,10 +24,15 @@ public class BaseService<T extends BaseEntity> {
 
 	private BaseMapper<T> mapper;
 
-	protected BaseService(Class<T> clazz) {
-		typeName = clazz.getSimpleName();
-		tableName = clazz.getAnnotation(TableName.class).value();
+	public BaseService(Class<T> clazz) {
 		mapper = new BaseMapper<>(clazz);
+		String name;
+		typeName = name = clazz.getSimpleName();
+		if (clazz.getAnnotation(TableName.class) == null) {
+			tableName = name.toLowerCase();
+			return;
+		}
+		tableName = clazz.getAnnotation(TableName.class).value();
 	}
 
 	//region Create
@@ -54,7 +57,7 @@ public class BaseService<T extends BaseEntity> {
 				System.err.printf("Unable to get value from field %s for type %s\n", x.getName(), typeName);
 			}
 		});
-		insertQuery.append("default, default)");
+		insertQuery.append("default)");
 		System.out.println(insertQuery.toString());
 		try (var connection = new DBConnection()) {
 			if (connection.update(insertQuery.toString())) {
@@ -73,24 +76,19 @@ public class BaseService<T extends BaseEntity> {
 	protected ResultSet getByPredicate(SqlPredicate<T> predicate, DBConnection connection) {
 		var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
 		System.out.println(query);
-		ResultSet set = connection.execute(query);
-		if (isResultSetEmpty(set))
-			throw new EmptyResultSetException(String.format("No entry found for query of type %s.", typeName));
-		return set;
+		return connection.execute(query);
 	}
 
 	public T getSingle(SqlPredicate<T> predicate) {
-		var connection = new DBConnection();
-		var entity = mapper.map(getByPredicate(predicate, connection));
-		connection.close();
-		return entity;
+		try (var connection = new DBConnection()) {
+			return mapper.map(getByPredicate(predicate, connection));
+		}
 	}
 
 	public List<T> getMultiple(SqlPredicate<T> predicate) {
-		var connection = new DBConnection();
-		var entity = mapper.mapToList(getByPredicate(predicate, connection));
-		connection.close();
-		return entity;
+		try (var connection = new DBConnection()) {
+			return mapper.mapToList(getByPredicate(predicate, connection));
+		}
 	}
 
 	public T getById(int id) {
@@ -148,13 +146,4 @@ public class BaseService<T extends BaseEntity> {
 		}
 	}
 	//endregion
-
-	private boolean isResultSetEmpty(ResultSet set) {
-		try {
-			return !set.isBeforeFirst();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return true;
-		}
-	}
 }

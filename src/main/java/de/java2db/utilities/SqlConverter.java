@@ -1,11 +1,18 @@
 package de.java2db.utilities;
 
-import com.trigersoft.jaque.expression.*;
+import com.trigersoft.jaque.expression.BinaryExpression;
+import com.trigersoft.jaque.expression.ConstantExpression;
+import com.trigersoft.jaque.expression.Expression;
+import com.trigersoft.jaque.expression.ExpressionType;
+import com.trigersoft.jaque.expression.ExpressionVisitor;
+import com.trigersoft.jaque.expression.InvocationExpression;
+import com.trigersoft.jaque.expression.LambdaExpression;
+import com.trigersoft.jaque.expression.MemberExpression;
+import com.trigersoft.jaque.expression.ParameterExpression;
+import com.trigersoft.jaque.expression.UnaryExpression;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.trigersoft.jaque.expression.ExpressionType.*;
 
 /**
  * This code is taken and modified from the
@@ -19,13 +26,13 @@ public class SqlConverter implements ExpressionVisitor<StringBuilder> {
 
 	private static String toSqlOp(int expressionType) {
 		switch (expressionType) {
-			case Equal:
+			case ExpressionType.Equal:
 				return "=";
-			case LogicalAnd:
+			case ExpressionType.LogicalAnd:
 				return "AND";
-			case LogicalOr:
+			case ExpressionType.LogicalOr:
 				return "OR";
-			case Convert:
+			case ExpressionType.Convert:
 				return "";
 		}
 		return ExpressionType.toString(expressionType);
@@ -33,7 +40,7 @@ public class SqlConverter implements ExpressionVisitor<StringBuilder> {
 
 	@Override
 	public StringBuilder visit(BinaryExpression e) {
-		var quote = e != body && e.getExpressionType() == LogicalOr;
+		var quote = e != body && e.getExpressionType() == ExpressionType.LogicalOr;
 
 		if (quote) sb.append('(');
 

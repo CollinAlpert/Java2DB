@@ -3,6 +3,7 @@ package de.java2db.mappers;
 import de.java2db.database.ForeignKey;
 import de.java2db.database.ForeignKeyObject;
 import de.java2db.entities.BaseEntity;
+import de.java2db.utilities.EmptyResultSetException;
 import de.java2db.utilities.IoC;
 import de.java2db.utilities.Utilities;
 
@@ -20,17 +21,20 @@ import java.util.stream.Collectors;
  */
 public class BaseMapper<T extends BaseEntity> {
 
-	private T instance;
+	private Class<T> clazz;
 
-	public BaseMapper(Class<T> instance) {
-		this.instance = IoC.resolve(instance);
+	public BaseMapper(Class<T> clazz) {
+		this.clazz = clazz;
 	}
 
 	public T map(ResultSet set) {
-		T entity = instance;
+		T entity = IoC.resolve(clazz);
 		try {
 			if (set.next()) {
 				setFields(set, entity);
+			} else {
+				if (isResultSetEmpty(set))
+					throw new EmptyResultSetException(String.format("No entry found for query of type %s.", clazz.getSimpleName()));
 			}
 			set.close();
 			return entity;
@@ -44,7 +48,7 @@ public class BaseMapper<T extends BaseEntity> {
 		List<T> list = new ArrayList<>();
 		try {
 			while (set.next()) {
-				T entity = instance;
+				T entity = IoC.resolve(clazz);
 				setFields(set, entity);
 				list.add(entity);
 			}
@@ -94,5 +98,14 @@ public class BaseMapper<T extends BaseEntity> {
 	private Map<Class<?>, Integer> getForeignKeyObjects(ArrayList<Field> fields) {
 		return fields.stream().filter(field -> field.getAnnotation(ForeignKeyObject.class) != null)
 				.collect(Collectors.toMap(Field::getType, field -> field.getAnnotation(ForeignKeyObject.class).value()));
+	}
+
+	private boolean isResultSetEmpty(ResultSet set) {
+		try {
+			return !set.isBeforeFirst();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return true;
+		}
 	}
 }
