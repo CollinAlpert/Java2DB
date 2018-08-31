@@ -36,4 +36,14 @@ public class Utilities {
 		} while (current != delimiter);
 		return fields;
 	}
+
+	public static void log(Object text) {
+		if (SystemParameter.LOG_QUERIES) {
+			System.out.println(text);
+		}
+	}
+
+	public static void logf(String x, Object... params) {
+		log(String.format(x, params));
+	}
 }

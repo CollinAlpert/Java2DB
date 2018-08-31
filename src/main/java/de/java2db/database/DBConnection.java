@@ -2,27 +2,67 @@ package de.java2db.database;
 
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
+import de.java2db.utilities.SystemParameter;
+import oracle.jdbc.pool.OracleDataSource;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 /**
  * @author Collin Alpert
  * @see <a href="https://github.com/CollinAlpert/APIs/blob/master/de/collin/DBConnection.java">GitHub</a>
  */
 public class DBConnection implements AutoCloseable {
-
-	public static String HOST;
-	public static String DATABASE;
-	public static String USERNAME;
-	public static String PASSWORD;
 	private Connection connection = null;
 	private boolean isConnectionValid;
 
 	public DBConnection() {
 		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
+			String driver;
+			String connectionString;
+			if (SystemParameter.PORT == 0) {
+				switch (SystemParameter.DATABASE_TYPE) {
+					default:
+					case MYSQL:
+						SystemParameter.PORT = 3306;
+						break;
+					case MICROSOFT:
+						SystemParameter.PORT = 1433;
+						break;
+					case ORACLE:
+						SystemParameter.PORT = 1521;
+						break;
+				}
+			}
+			switch (SystemParameter.DATABASE_TYPE) {
+				default:
+				case MYSQL:
+					driver = "com.mysql.cj.jdbc.Driver";
+					connectionString = "jdbc:mysql://" + SystemParameter.HOST + ":" + SystemParameter.PORT + "/" + SystemParameter.DATABASE + "?serverTimezone=UTC";
+					break;
+				case ORACLE:
+					driver = "oracle.jdbc.driver.OracleDriver";
+					connectionString = "jdbc:oracle:thin:@" + SystemParameter.HOST + ":" + SystemParameter.PORT + ":orcl";
+					OracleDataSource source = new OracleDataSource();
+					source.setDatabaseName(SystemParameter.DATABASE);
+					source.setURL(connectionString);
+					source.setUser(SystemParameter.USERNAME);
+					source.setPassword(SystemParameter.PASSWORD);
+					connection = source.getConnection();
+					break;
+				case MICROSOFT:
+					driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+					connectionString = "jdbc:sqlserver://" + SystemParameter.HOST + ":" + SystemParameter.PORT + ";databaseName=" + SystemParameter.DATABASE;
+					break;
+			}
+			Class.forName(driver);
 			DriverManager.setLoginTimeout(5);
-			connection = DriverManager.getConnection("jdbc:mysql://" + HOST + ":3306/" + DATABASE + "?serverTimezone=UTC&useSSL=false", USERNAME, PASSWORD);
+			if (connection == null) {
+				connection = DriverManager.getConnection(connectionString, SystemParameter.USERNAME, SystemParameter.PASSWORD);
+			}
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {
 			System.err.println("The connection to the database failed. Please check if the MySQL server is reachable and if you have an internet connection.");

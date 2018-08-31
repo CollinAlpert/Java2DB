@@ -58,10 +58,10 @@ public class BaseService<T extends BaseEntity> {
 			}
 		});
 		insertQuery.append("default)");
-		System.out.println(insertQuery.toString());
+		Utilities.log(insertQuery.toString());
 		try (var connection = new DBConnection()) {
 			if (connection.update(insertQuery.toString())) {
-				System.out.printf("%s successfully created!\n", typeName);
+				Utilities.logf("%s successfully created!", typeName);
 				return true;
 			} else {
 				System.err.printf("Unable to create type %s\n", typeName);
@@ -75,7 +75,7 @@ public class BaseService<T extends BaseEntity> {
 
 	protected ResultSet getByPredicate(SqlPredicate<T> predicate, DBConnection connection) {
 		var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
-		System.out.println(query);
+		Utilities.log(query);
 		return connection.execute(query);
 	}
 
@@ -119,10 +119,10 @@ public class BaseService<T extends BaseEntity> {
 		});
 		updateQuery.append(String.join(", ", fieldSetterList))
 				.append(" where id = ").append(instance.getId());
-		System.out.println(updateQuery.toString());
+		Utilities.log(updateQuery.toString());
 		try (var connection = new DBConnection()) {
 			if (connection.update(updateQuery.toString())) {
-				System.out.printf("%s with id %d was successfully updated\n", typeName, instance.getId());
+				Utilities.logf("%s with id %d was successfully updated", typeName, instance.getId());
 				return true;
 			} else {
 				System.err.printf("%s with id %d could not be updated\n", typeName, instance.getId());
@@ -141,7 +141,7 @@ public class BaseService<T extends BaseEntity> {
 		try (var connection = new DBConnection()) {
 			boolean success = connection.update("delete from " + tableName + " where id=?", id);
 			if (success) {
-				System.out.printf("%s with id %d successfully deleted!\n", typeName, id);
+				Utilities.logf("%s with id %d successfully deleted!", typeName, id);
 			}
 		}
 	}
