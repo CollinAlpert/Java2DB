@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a field as the correspondent object to a foreign key.
+ * Marks a field as the correspondent object to a foreign key. This property does not have to exists on the database.
  * The parameter value has to match the corresponding {@link ForeignKey} parameter value.
  */
 @Target(ElementType.FIELD)

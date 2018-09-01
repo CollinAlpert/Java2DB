@@ -16,6 +16,9 @@ import java.util.stream.Collectors;
 
 /**
  * @author Collin Alpert
+ * <p>
+ * Class that provides base functionality for all service classes. Every service class must extend this class.
+ * </p>
  */
 public class BaseService<T extends BaseEntity> {
 
@@ -24,6 +27,11 @@ public class BaseService<T extends BaseEntity> {
 
 	private BaseMapper<T> mapper;
 
+	/**
+	 * Constructor for the base class of all services. It is possible to create instances of it.
+	 *
+	 * @param clazz The entity class corresponding to this service class.
+	 */
 	public BaseService(Class<T> clazz) {
 		mapper = new BaseMapper<>(clazz);
 		String name;
@@ -35,7 +43,15 @@ public class BaseService<T extends BaseEntity> {
 		tableName = clazz.getAnnotation(TableName.class).value();
 	}
 
+
 	//region Create
+
+	/**
+	 * Creates a Java entity on the database.
+	 *
+	 * @param instance The instance to create on the database.
+	 * @return <code>True</code> if the INSERT was successful, <code>false</code> if not.
+	 */
 	public boolean create(T instance) {
 		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
 		var databaseFields = Utilities.getAllFields(instance).stream().map(Field::getName).collect(Collectors.joining(", "));
@@ -73,34 +89,61 @@ public class BaseService<T extends BaseEntity> {
 
 	//region Read
 
+	/**
+	 * @param predicate  The {@link SqlPredicate} for constraints on the SELECT query.
+	 * @param connection A connection to execute the query on.
+	 * @return A {@link ResultSet} by a predicate.
+	 */
 	protected ResultSet getByPredicate(SqlPredicate<T> predicate, DBConnection connection) {
 		var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
 		Utilities.log(query);
 		return connection.execute(query);
 	}
 
+	/**
+	 * @param predicate The {@link SqlPredicate} to add constraints to a SELECT query.
+	 * @return An entity matching the result of the query.
+	 */
 	public T getSingle(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
 			return mapper.map(getByPredicate(predicate, connection));
 		}
 	}
 
+	/**
+	 * @param predicate The {@link SqlPredicate} to add constraints to a SELECT query.
+	 * @return A list of entities matching the result of the query.
+	 */
 	public List<T> getMultiple(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
 			return mapper.mapToList(getByPredicate(predicate, connection));
 		}
 	}
 
+	/**
+	 * @param id The id of the desired entity.
+	 * @return Gets an entity by its id.
+	 */
 	public T getById(int id) {
 		return getSingle(x -> x.getId() == id);
 	}
 
+	/**
+	 * @return All entities in this table.
+	 */
 	public List<T> getAll() {
 		return getMultiple(x -> true);
 	}
 	//endregion
 
 	//region Update
+
+	/**
+	 * Applies updates to an entity on the database.
+	 *
+	 * @param instance The instance to update on the interface.
+	 * @return <code>True</code> if the update is successful, <code>false</code> if not.
+	 */
 	public boolean update(T instance) {
 		var updateQuery = new StringBuilder("update ").append(tableName).append(" set ");
 		ArrayList<String> fieldSetterList = new ArrayList<>();
@@ -133,10 +176,21 @@ public class BaseService<T extends BaseEntity> {
 	//endregion
 
 	//region Delete
+
+	/**
+	 * Deletes the corresponding row on the database.
+	 *
+	 * @param instance The instance to delete on the database.
+	 */
 	public void delete(T instance) {
 		delete(instance.getId());
 	}
 
+	/**
+	 * Deletes a row by an id.
+	 *
+	 * @param id The row with this id to delete.
+	 */
 	public void delete(int id) {
 		try (var connection = new DBConnection()) {
 			boolean success = connection.update("delete from " + tableName + " where id=?", id);

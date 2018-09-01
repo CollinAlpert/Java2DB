@@ -2,6 +2,9 @@ package de.java2db.entities;
 
 /**
  * @author Collin Alpert
+ * <p>
+ * Describes an entity that has an id, a code and a description.
+ * </p>
  */
 public class BaseCodeAndDescriptionEntity extends BaseEntity {
 	private String code;

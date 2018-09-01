@@ -6,6 +6,9 @@ import java.util.function.Predicate;
 
 /**
  * @author Collin Alpert
+ * <p>
+ * A serialized predicate.
+ * </p>
  */
 @FunctionalInterface
 public interface SqlPredicate<T> extends Predicate<T>, Serializable {

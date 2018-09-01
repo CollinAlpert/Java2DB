@@ -46,6 +46,8 @@ public class DBConnection implements AutoCloseable {
 				case ORACLE:
 					driver = "oracle.jdbc.driver.OracleDriver";
 					connectionString = "jdbc:oracle:thin:@" + SystemParameter.HOST + ":" + SystemParameter.PORT + ":orcl";
+					//Requires the Oracle JDBC driver library.
+					//Delete this block if not needed
 					OracleDataSource source = new OracleDataSource();
 					source.setDatabaseName(SystemParameter.DATABASE);
 					source.setURL(connectionString);

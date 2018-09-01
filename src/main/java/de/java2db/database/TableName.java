@@ -7,6 +7,9 @@ import java.lang.annotation.Target;
 
 /**
  * @author Collin Alpert
+ * <p>
+ * Specifies the database table name for an entity. If this annotation is not specified, the class name as lower case will be used.
+ * </p>
  */
 
 @Target(ElementType.TYPE)

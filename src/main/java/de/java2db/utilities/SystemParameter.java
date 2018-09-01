@@ -4,6 +4,9 @@ import de.java2db.database.DatabaseTypes;
 
 /**
  * @author Collin Alpert
+ * <p>
+ * Class for configuring settings in this library, i.e. the database connection.
+ * </p>
  */
 public class SystemParameter {
 	public static String HOST;

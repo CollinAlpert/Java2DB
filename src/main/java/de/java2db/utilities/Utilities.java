@@ -24,6 +24,15 @@ public class Utilities {
 		return getAllFields(instance, delimiter, false);
 	}
 
+	/**
+	 * Gets all fields of an entity including all base classes.
+	 *
+	 * @param instance           The instance to get the fields of.
+	 * @param delimiter          Up to which parent class to go to.
+	 * @param includeForeignKeys Decides if to include foreign key objects in this list, since they do not exist on the database.
+	 * @param <T>                The type of the entity.
+	 * @return A list with all fields of this class and its parents, up to the delimiter class.
+	 */
 	public static <T extends BaseEntity> ArrayList<Field> getAllFields(T instance, Class<?> delimiter, boolean includeForeignKeys) {
 		Class<?> current = instance.getClass();
 		ArrayList<Field> fields = new ArrayList<>();
@@ -37,13 +46,24 @@ public class Utilities {
 		return fields;
 	}
 
+	/**
+	 * Prints messages to the query, while considering the <code>LOG_QUERIES</code> constant.
+	 *
+	 * @param text The message to print.
+	 */
 	public static void log(Object text) {
 		if (SystemParameter.LOG_QUERIES) {
 			System.out.println(text);
 		}
 	}
 
-	public static void logf(String x, Object... params) {
-		log(String.format(x, params));
+	/**
+	 * Prints formatted messages to the query, while considering the <code>LOG_QUERIES</code> constant.
+	 *
+	 * @param text   The formatted text.
+	 * @param params The parameters to be inserted into the string.
+	 */
+	public static void logf(String text, Object... params) {
+		log(String.format(text, params));
 	}
 }
