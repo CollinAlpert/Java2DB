@@ -1,12 +1,12 @@
-package de.java2db.services;
+package com.github.collinalpert.java2db.services;
 
-import de.java2db.database.DBConnection;
-import de.java2db.database.TableName;
-import de.java2db.entities.BaseEntity;
-import de.java2db.mappers.BaseMapper;
-import de.java2db.utilities.Lambda2Sql;
-import de.java2db.utilities.SqlPredicate;
-import de.java2db.utilities.Utilities;
+import com.github.collinalpert.java2db.database.DBConnection;
+import com.github.collinalpert.java2db.database.TableName;
+import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.mappers.BaseMapper;
+import com.github.collinalpert.java2db.utilities.Lambda2Sql;
+import com.github.collinalpert.java2db.utilities.SqlPredicate;
+import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;

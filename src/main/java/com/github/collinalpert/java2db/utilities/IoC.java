@@ -1,7 +1,7 @@
-package de.java2db.utilities;
+package com.github.collinalpert.java2db.utilities;
 
-import de.java2db.entities.BaseEntity;
-import de.java2db.services.BaseService;
+import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.services.BaseService;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;

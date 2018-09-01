@@ -1,4 +1,4 @@
-package de.java2db.database;
+package com.github.collinalpert.java2db.database;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

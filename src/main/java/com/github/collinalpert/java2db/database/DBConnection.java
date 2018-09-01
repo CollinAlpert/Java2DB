@@ -1,8 +1,8 @@
-package de.java2db.database;
+package com.github.collinalpert.java2db.database;
 
+import com.github.collinalpert.java2db.utilities.SystemParameter;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
-import de.java2db.utilities.SystemParameter;
 import oracle.jdbc.pool.OracleDataSource;
 
 import java.sql.Connection;

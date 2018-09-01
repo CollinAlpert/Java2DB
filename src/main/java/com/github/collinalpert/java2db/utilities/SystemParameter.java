@@ -1,6 +1,6 @@
-package de.java2db.utilities;
+package com.github.collinalpert.java2db.utilities;
 
-import de.java2db.database.DatabaseTypes;
+import com.github.collinalpert.java2db.database.DatabaseTypes;
 
 /**
  * @author Collin Alpert

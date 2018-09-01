@@ -1,7 +1,7 @@
-package de.java2db.utilities;
+package com.github.collinalpert.java2db.utilities;
 
-import de.java2db.database.ForeignKeyObject;
-import de.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.database.ForeignKeyObject;
+import com.github.collinalpert.java2db.entities.BaseEntity;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;

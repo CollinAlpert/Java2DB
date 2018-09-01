@@ -1,11 +1,11 @@
-package de.java2db.mappers;
+package com.github.collinalpert.java2db.mappers;
 
-import de.java2db.database.ForeignKey;
-import de.java2db.database.ForeignKeyObject;
-import de.java2db.entities.BaseEntity;
-import de.java2db.utilities.EmptyResultSetException;
-import de.java2db.utilities.IoC;
-import de.java2db.utilities.Utilities;
+import com.github.collinalpert.java2db.database.ForeignKey;
+import com.github.collinalpert.java2db.database.ForeignKeyObject;
+import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.utilities.EmptyResultSetException;
+import com.github.collinalpert.java2db.utilities.IoC;
+import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;

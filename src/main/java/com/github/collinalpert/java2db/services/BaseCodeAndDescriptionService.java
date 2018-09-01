@@ -1,6 +1,6 @@
-package de.java2db.services;
+package com.github.collinalpert.java2db.services;
 
-import de.java2db.entities.BaseCodeAndDescriptionEntity;
+import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionEntity;
 
 import java.util.List;
 

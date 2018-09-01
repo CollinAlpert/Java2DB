@@ -1,4 +1,4 @@
-package de.java2db.utilities;
+package com.github.collinalpert.java2db.utilities;
 
 /**
  * @author Collin Alpert

@@ -1,4 +1,4 @@
-package de.java2db.entities;
+package com.github.collinalpert.java2db.entities;
 
 
 /**
