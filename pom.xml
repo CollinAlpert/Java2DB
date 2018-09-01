@@ -6,17 +6,37 @@
 
     <groupId>de.collin</groupId>
     <artifactId>java2db</artifactId>
-    <version>1.0.1</version>
+    <version>1.1</version>
+    <packaging>jar</packaging>
+
+    <name>Java2DB</name>
+    <description>A small ORM library for Java.</description>
+    <url>https://github.com/CollinAlpert/Java2DB</url>
     <developers>
         <developer>
             <id>collinalpert</id>
             <name>Collin Alpert</name>
             <email>collinalpert@gmail.com</email>
+            <organization>Collin Alpert</organization>
+            <organizationUrl>https://github.com/CollinAlpert/Java2DB</organizationUrl>
             <roles>
                 <role>Admin</role>
             </roles>
         </developer>
     </developers>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/CollinAlpert/Java2DB.git</connection>
+        <developerConnection>scm:git:ssh://github.com:CollinAlpert/Java2DB.git</developerConnection>
+        <url>http://github.com/CollinAlpert/Java2DB/tree/master</url>
+    </scm>
 
     <properties>
         <jdk.version>10</jdk.version>
