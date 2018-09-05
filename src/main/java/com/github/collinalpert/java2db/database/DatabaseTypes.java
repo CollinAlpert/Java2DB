@@ -7,5 +7,5 @@ package com.github.collinalpert.java2db.database;
  * </p>
  */
 public enum DatabaseTypes {
-	MYSQL, ORACLE, MICROSOFT
+	MYSQL, MICROSOFT
 }

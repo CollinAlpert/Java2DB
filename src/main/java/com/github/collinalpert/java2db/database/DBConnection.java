@@ -3,7 +3,6 @@ package com.github.collinalpert.java2db.database;
 import com.github.collinalpert.java2db.utilities.SystemParameter;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
-import oracle.jdbc.pool.OracleDataSource;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -32,9 +31,6 @@ public class DBConnection implements AutoCloseable {
 					case MICROSOFT:
 						SystemParameter.PORT = 1433;
 						break;
-					case ORACLE:
-						SystemParameter.PORT = 1521;
-						break;
 				}
 			}
 			switch (SystemParameter.DATABASE_TYPE) {
@@ -43,18 +39,6 @@ public class DBConnection implements AutoCloseable {
 					driver = "com.mysql.cj.jdbc.Driver";
 					connectionString = "jdbc:mysql://" + SystemParameter.HOST + ":" + SystemParameter.PORT + "/" + SystemParameter.DATABASE + "?serverTimezone=UTC";
 					break;
-				case ORACLE:
-					driver = "oracle.jdbc.driver.OracleDriver";
-					connectionString = "jdbc:oracle:thin:@" + SystemParameter.HOST + ":" + SystemParameter.PORT + ":orcl";
-					//Requires the Oracle JDBC driver library.
-					//Delete this block if not needed
-					OracleDataSource source = new OracleDataSource();
-					source.setDatabaseName(SystemParameter.DATABASE);
-					source.setURL(connectionString);
-					source.setUser(SystemParameter.USERNAME);
-					source.setPassword(SystemParameter.PASSWORD);
-					connection = source.getConnection();
-					break;
 				case MICROSOFT:
 					driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
 					connectionString = "jdbc:sqlserver://" + SystemParameter.HOST + ":" + SystemParameter.PORT + ";databaseName=" + SystemParameter.DATABASE;
@@ -62,9 +46,7 @@ public class DBConnection implements AutoCloseable {
 			}
 			Class.forName(driver);
 			DriverManager.setLoginTimeout(5);
-			if (connection == null) {
-				connection = DriverManager.getConnection(connectionString, SystemParameter.USERNAME, SystemParameter.PASSWORD);
-			}
+			connection = DriverManager.getConnection(connectionString, SystemParameter.USERNAME, SystemParameter.PASSWORD);
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {
 			System.err.println("The connection to the database failed. Please check if the MySQL server is reachable and if you have an internet connection.");

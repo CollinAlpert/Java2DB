@@ -83,7 +83,15 @@ Custom methods can be defined in the respective service.
 
 ### Getting started
 
-First, include the Maven artifact (coming soon). Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
+First, include the Maven artifact:
+```xml
+<dependency>
+    <groupId>com.github.collinalpert</groupId>
+    <artifactId>java2db</artifactId>
+    <version>1.4</version>
+</dependency>
+```
+ Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
 1. Connect to the database. Set the static variables ``HOST``, ``DATABASE``, ``USERNAME``, ``PASSWORD``, ``DATABASE_TYPE`` and optionally ``PORT`` of the `SystemParameter` class so achieve possibility of connection.
 2. Register an instance of all of your services. Use the ``IoC.registerService`` method to do this. Using the above example, it would look something like this: ``IoC.registerService(Person.class, new PersonService());``.
 
