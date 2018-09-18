@@ -12,7 +12,6 @@ import java.util.Map;
  * <p>
  * A <pre>Inversion of Control</pre> class.
  * It is responsible for registering services, resolving services and administrating default query constraints.
- * </p>
  */
 public class IoC {
 
@@ -62,6 +61,8 @@ public class IoC {
 	 * Resolves a service class by the entity it was registered with.
 	 *
 	 * @param clazz The entity class corresponding to a service class.
+	 * @param <E> The type of the entity.
+	 * @param <S> The type of the service.
 	 * @return An instance of a previously registered service class.
 	 */
 	public static <E extends BaseEntity, S extends BaseService<E>> S resolveServiceByEntity(Class<E> clazz) {
@@ -89,6 +90,7 @@ public class IoC {
 	 *
 	 * @param clazz     The entity to add the constraint to.
 	 * @param predicate The constraint.
+	 * @param <E> The type of the entity.
 	 */
 	public static <E extends BaseEntity> void addConstraint(Class<E> clazz, SqlPredicate<E> predicate) {
 		selectConstraints.put(clazz, predicate);
@@ -98,6 +100,8 @@ public class IoC {
 	 * Checks if a service has already been registered.
 	 *
 	 * @param clazz The class os the service.
+	 * @param <E> The type of the entity.
+	 * @param <S> The type of the service.
 	 * @return {@code True} if an instance of the service is registered, {@code false} if not.
 	 */
 	public <E extends BaseEntity, S extends BaseService<E>> boolean isRegistered(Class<S> clazz) {
