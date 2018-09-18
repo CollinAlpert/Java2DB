@@ -9,9 +9,9 @@ package com.github.collinalpert.java2db.entities;
  */
 public class BaseEntity {
 
-	private int id;
+	private long id;
 
-	public int getId() {
+	public long getId() {
 		return id;
 	}
 

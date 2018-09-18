@@ -3,6 +3,7 @@ package com.github.collinalpert.java2db.services;
 import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Collin Alpert
@@ -20,7 +21,7 @@ public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntit
 	 * @param code The code to get the entity from.
 	 * @return An entity matching this code. It is assumed that a code, just like the id, is unique in a table.
 	 */
-	public T getByCode(String code) {
+	public Optional<T> getByCode(String code) {
 		return getSingle(x -> x.getCode() == code);
 	}
 

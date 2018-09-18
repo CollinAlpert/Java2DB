@@ -3,7 +3,6 @@ package com.github.collinalpert.java2db.mappers;
 import com.github.collinalpert.java2db.database.ForeignKey;
 import com.github.collinalpert.java2db.database.ForeignKeyObject;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.utilities.EmptyResultSetException;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.Utilities;
 
@@ -14,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -34,24 +34,22 @@ public class BaseMapper<T extends BaseEntity> {
 	 * Maps a {@link ResultSet} with a single row to a Java entity.
 	 *
 	 * @param set The {@link ResultSet} to map.
-	 * @return A Java entity.
-	 * @throws EmptyResultSetException if the {@link ResultSet} is empty.
-	 *                                 It is expected that a query that is supposed to return exactly one value, actually does.
+	 * @return An Optional which contains the Java entity if the query was successful.
 	 */
-	public T map(ResultSet set) {
+	public Optional<T> map(ResultSet set) {
 		T entity = IoC.resolve(clazz);
 		try {
 			if (set.next()) {
 				setFields(set, entity);
 			} else {
-				if (isResultSetEmpty(set))
-					throw new EmptyResultSetException(String.format("No entry found for query of type %s.", clazz.getSimpleName()));
+				set.close();
+				return Optional.empty();
 			}
 			set.close();
-			return entity;
+			return Optional.of(entity);
 		} catch (SQLException | IllegalAccessException e) {
 			e.printStackTrace();
-			return null;
+			return Optional.empty();
 		}
 	}
 
@@ -134,20 +132,5 @@ public class BaseMapper<T extends BaseEntity> {
 	private Map<Class<?>, Integer> getForeignKeyObjects(ArrayList<Field> fields) {
 		return fields.stream().filter(field -> field.getAnnotation(ForeignKeyObject.class) != null)
 				.collect(Collectors.toMap(Field::getType, field -> field.getAnnotation(ForeignKeyObject.class).value()));
-	}
-
-	/**
-	 * Checks if a {@link ResultSet} is empty.
-	 *
-	 * @param set The {@link ResultSet} to check.
-	 * @return <code>True</code> if the {@link ResultSet} is empty, <code>false</code> if not.
-	 */
-	private boolean isResultSetEmpty(ResultSet set) {
-		try {
-			return !set.isBeforeFirst();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return true;
-		}
 	}
 }

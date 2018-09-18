@@ -47,7 +47,7 @@ public class Utilities {
 	}
 
 	/**
-	 * Prints messages to the query, while considering the <code>LOG_QUERIES</code> constant.
+	 * Prints messages to the query, while considering the {@code LOG_QUERIES} constant.
 	 *
 	 * @param text The message to print.
 	 */
@@ -58,7 +58,7 @@ public class Utilities {
 	}
 
 	/**
-	 * Prints formatted messages to the query, while considering the <code>LOG_QUERIES</code> constant.
+	 * Prints formatted messages to the query, while considering the {@code LOG_QUERIES} constant.
 	 *
 	 * @param text   The formatted text.
 	 * @param params The parameters to be inserted into the string.

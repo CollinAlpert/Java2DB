@@ -24,24 +24,24 @@ public class DBConnection implements AutoCloseable {
 			String connectionString;
 			if (SystemParameter.PORT == 0) {
 				switch (SystemParameter.DATABASE_TYPE) {
-					default:
-					case MYSQL:
-						SystemParameter.PORT = 3306;
-						break;
 					case MICROSOFT:
 						SystemParameter.PORT = 1433;
+						break;
+					case MYSQL:
+					default:
+						SystemParameter.PORT = 3306;
 						break;
 				}
 			}
 			switch (SystemParameter.DATABASE_TYPE) {
-				default:
-				case MYSQL:
-					driver = "com.mysql.cj.jdbc.Driver";
-					connectionString = "jdbc:mysql://" + SystemParameter.HOST + ":" + SystemParameter.PORT + "/" + SystemParameter.DATABASE + "?serverTimezone=UTC";
-					break;
 				case MICROSOFT:
 					driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
 					connectionString = "jdbc:sqlserver://" + SystemParameter.HOST + ":" + SystemParameter.PORT + ";databaseName=" + SystemParameter.DATABASE;
+					break;
+				case MYSQL:
+				default:
+					driver = "com.mysql.cj.jdbc.Driver";
+					connectionString = "jdbc:mysql://" + SystemParameter.HOST + ":" + SystemParameter.PORT + "/" + SystemParameter.DATABASE + "?serverTimezone=UTC";
 					break;
 			}
 			Class.forName(driver);
@@ -72,7 +72,7 @@ public class DBConnection implements AutoCloseable {
 	 * Executes an SELECT SQL statement on the database without Java parameters.
 	 *
 	 * @param query The query to be executed.
-	 * @return The <code>ResultSet</code> containing the result from the SELECT query.
+	 * @return The {@link ResultSet} containing the result from the SELECT query.
 	 */
 	public ResultSet execute(String query) {
 		try {
@@ -91,7 +91,7 @@ public class DBConnection implements AutoCloseable {
 	 *
 	 * @param query  The query to be executed.
 	 * @param params The Java parameters to be inserted into the query.
-	 * @return The <code>ResultSet</code> containing the result from the SELECT query.
+	 * @return The {@link ResultSet} containing the result from the SELECT query.
 	 */
 	public ResultSet execute(String query, Object... params) {
 		try {
@@ -112,7 +112,7 @@ public class DBConnection implements AutoCloseable {
 	 * This command is used for any queries that are supposed to update the database, such as UPDATE, DELETE, TRUNCATE etc.
 	 *
 	 * @param query The query to be executed.
-	 * @return <code>true</code> if the update was successful, <code>false</code> if not.
+	 * @return {@code True} if the update was successful, {@code false} if not.
 	 */
 	public boolean update(String query) {
 		try {
@@ -131,7 +131,7 @@ public class DBConnection implements AutoCloseable {
 	 *
 	 * @param query  The query to be executed.
 	 * @param params The Java parameters to be inserted into the query.
-	 * @return <code>true</code> if the update was successful, <code>false</code> if not.
+	 * @return {@code True} if the update was successful, {@code false} if not.
 	 */
 	public boolean update(String query, Object... params) {
 		try {
@@ -151,8 +151,8 @@ public class DBConnection implements AutoCloseable {
 	/**
 	 * Determines if a connection to the database still exists or not.
 	 *
-	 * @return <code>True</code> if a connection exists, <code>false</code> if not.
-	 * This method will return <code>false</code> if an exception occurs.
+	 * @return {@code True} if a connection exists, {@code false} if not.
+	 * This method will return {@code false} if an exception occurs.
 	 */
 	public boolean isOpen() {
 		try {

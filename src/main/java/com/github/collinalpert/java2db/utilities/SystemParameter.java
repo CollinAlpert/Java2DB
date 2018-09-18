@@ -15,5 +15,5 @@ public class SystemParameter {
 	public static String PASSWORD;
 	public static DatabaseTypes DATABASE_TYPE;
 	public static int PORT;
-	public static boolean LOG_QUERIES;
+	public static boolean LOG_QUERIES = true;
 }

@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -33,14 +34,14 @@ public class BaseService<T extends BaseEntity> {
 	 * @param clazz The entity class corresponding to this service class.
 	 */
 	public BaseService(Class<T> clazz) {
-		mapper = new BaseMapper<>(clazz);
-		String name;
-		typeName = name = clazz.getSimpleName();
-		if (clazz.getAnnotation(TableName.class) == null) {
-			tableName = name.toLowerCase();
+		this.mapper = new BaseMapper<>(clazz);
+		this.typeName = clazz.getSimpleName();
+		var tableNameAnnotation = clazz.getAnnotation(TableName.class);
+		if (tableNameAnnotation == null) {
+			this.tableName = this.typeName.toLowerCase();
 			return;
 		}
-		tableName = clazz.getAnnotation(TableName.class).value();
+		this.tableName = tableNameAnnotation.value();
 	}
 
 
@@ -50,7 +51,7 @@ public class BaseService<T extends BaseEntity> {
 	 * Creates a Java entity on the database.
 	 *
 	 * @param instance The instance to create on the database.
-	 * @return <code>True</code> if the INSERT was successful, <code>false</code> if not.
+	 * @return {@code True} if the INSERT was successful, {@code false} if not.
 	 */
 	public boolean create(T instance) {
 		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
@@ -80,7 +81,7 @@ public class BaseService<T extends BaseEntity> {
 				Utilities.logf("%s successfully created!", typeName);
 				return true;
 			} else {
-				System.err.printf("Unable to create type %s\n", typeName);
+				System.err.printf("Unable to create type %s.\n", typeName);
 				return false;
 			}
 		}
@@ -104,7 +105,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The {@link SqlPredicate} to add constraints to a SELECT query.
 	 * @return An entity matching the result of the query.
 	 */
-	public T getSingle(SqlPredicate<T> predicate) {
+	public Optional<T> getSingle(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
 			return mapper.map(getByPredicate(predicate, connection));
 		}
@@ -124,7 +125,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param id The id of the desired entity.
 	 * @return Gets an entity by its id.
 	 */
-	public T getById(int id) {
+	public Optional<T> getById(long id) {
 		return getSingle(x -> x.getId() == id);
 	}
 
@@ -142,7 +143,7 @@ public class BaseService<T extends BaseEntity> {
 	 * Applies updates to an entity on the database.
 	 *
 	 * @param instance The instance to update on the interface.
-	 * @return <code>True</code> if the update is successful, <code>false</code> if not.
+	 * @return {@code True} if the update is successful, {@code false} if not.
 	 */
 	public boolean update(T instance) {
 		var updateQuery = new StringBuilder("update ").append(tableName).append(" set ");
@@ -191,7 +192,7 @@ public class BaseService<T extends BaseEntity> {
 	 *
 	 * @param id The row with this id to delete.
 	 */
-	public void delete(int id) {
+	public void delete(long id) {
 		try (var connection = new DBConnection()) {
 			boolean success = connection.update("delete from " + tableName + " where id=?", id);
 			if (success) {
