@@ -88,13 +88,13 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>1.5</version>
+    <version>1.5.1</version>
 </dependency>
 ```
  Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
-1. Connect to the database. Set the static variables ``HOST``, ``DATABASE``, ``USERNAME``, ``PASSWORD``, ``DATABASE_TYPE`` and optionally ``PORT`` of the `SystemParameter` class to achieve possibility of connection.
+1. Connect to the database. Set the static variables ``HOST``, ``DATABASE``, ``USERNAME``, ``PASSWORD`` and optionally ``DATABASE_TYPE`` and ``PORT`` of the `DBConnection` class to achieve possibility of connection.
 2. Register an instance of all of your services. Use the ``IoC.registerService`` method to do this. Using the above example, it would look something like this: ``IoC.registerService(Person.class, new PersonService());``.
 
 To retrieve an instance of a service, use the ``IoC.resolveService`` method.\
-If you would not like your queries logged in the console, call the ``SystemParameter.LOG_QUERIES = false;`` statement at the beginning of your application.  
+If you would not like your queries logged in the console, call the ``DBConnection.LOG_QUERIES = false;`` statement at the beginning of your application.  
   

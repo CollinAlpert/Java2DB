@@ -10,6 +10,9 @@ import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -54,27 +57,51 @@ public class BaseService<T extends BaseEntity> {
 	 * @return {@code True} if the INSERT was successful, {@code false} if not.
 	 */
 	public boolean create(T instance) {
-		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
+		var insertQuery = new StringBuilder("insert into `").append(tableName).append("` (");
 		var databaseFields = Utilities.getAllFields(instance).stream().map(Field::getName).collect(Collectors.joining(", "));
-		insertQuery.append(databaseFields).append(") values (");
-		Utilities.getAllFields(instance, BaseEntity.class).forEach(x -> {
-			x.setAccessible(true);
+		insertQuery.append(databaseFields).append(") values");
+		List<String> values = new ArrayList<>();
+		Utilities.getAllFields(instance, BaseEntity.class).forEach(field -> {
+			field.setAccessible(true);
 			try {
-				var value = x.get(instance);
+				var value = field.get(instance);
 				if (value == null) {
-					insertQuery.append("default, ");
+					values.add("default");
 					return;
 				}
 				if (value instanceof String) {
-					insertQuery.append("'").append(value).append("'").append(", ");
+					values.add(String.format("'%s'", value));
 					return;
 				}
-				insertQuery.append(value).append(", ");
+				if (value instanceof Boolean) {
+					var bool = (boolean) value;
+					values.add(Integer.toString(bool ? 1 : 0));
+					return;
+				}
+				if (value instanceof LocalDateTime) {
+					var dateTime = (LocalDateTime) value;
+					values.add(String.format("'%d-%d-%d %d:%d:%d'", dateTime.getYear(), dateTime.getMonthValue(),
+							dateTime.getDayOfMonth(), dateTime.getHour(), dateTime.getMinute(), dateTime.getSecond()));
+					return;
+				}
+				if (value instanceof LocalDate) {
+					var date = (LocalDate) value;
+					values.add(String.format("'%d-%d-%d'", date.getYear(), date.getMonthValue(),
+							date.getDayOfMonth()));
+					return;
+				}
+				if (value instanceof LocalTime) {
+					var time = (LocalTime) value;
+					values.add(String.format("'%d:%d:%d'", time.getHour(), time.getMinute(), time.getSecond()));
+					return;
+				}
+				values.add(value.toString());
 			} catch (IllegalAccessException e) {
-				System.err.printf("Unable to get value from field %s for type %s\n", x.getName(), typeName);
+				System.err.printf("Unable to get value from field %s for type %s\n", field.getName(), typeName);
 			}
 		});
-		insertQuery.append("default)");
+		values.add("default");
+		insertQuery.append(" (").append(String.join(", ", values)).append(")");
 		Utilities.log(insertQuery.toString());
 		try (var connection = new DBConnection()) {
 			if (connection.update(insertQuery.toString())) {
@@ -146,19 +173,44 @@ public class BaseService<T extends BaseEntity> {
 	 * @return {@code True} if the update is successful, {@code false} if not.
 	 */
 	public boolean update(T instance) {
-		var updateQuery = new StringBuilder("update ").append(tableName).append(" set ");
+		var updateQuery = new StringBuilder("update `").append(tableName).append("` set ");
 		ArrayList<String> fieldSetterList = new ArrayList<>();
-		Utilities.getAllFields(instance, BaseEntity.class).forEach(x -> {
-			x.setAccessible(true);
+		Utilities.getAllFields(instance, BaseEntity.class).forEach(field -> {
+			field.setAccessible(true);
 			try {
-				var value = x.get(instance);
+				var value = field.get(instance);
+				if (value == null) {
+					fieldSetterList.add(String.format("%s = default", field.getName()));
+				}
 				if (value instanceof String) {
-					fieldSetterList.add(String.format("%s = '%s'", x.getName(), value));
+					fieldSetterList.add(String.format("%s = '%s'", field.getName(), value));
 					return;
 				}
-				fieldSetterList.add(x.getName() + " = " + value);
+				if (value instanceof Boolean) {
+					var bool = (boolean) value;
+					fieldSetterList.add(String.format("%s = %d", field.getName(), bool ? 1 : 0));
+					return;
+				}
+				if (value instanceof LocalDateTime) {
+					var dateTime = (LocalDateTime) value;
+					fieldSetterList.add(String.format("%s = '%d-%d-%d %d:%d:%d'", field.getName(), dateTime.getYear(), dateTime.getMonthValue(),
+							dateTime.getDayOfMonth(), dateTime.getHour(), dateTime.getMinute(), dateTime.getSecond()));
+					return;
+				}
+				if (value instanceof LocalDate) {
+					var date = (LocalDate) value;
+					fieldSetterList.add(String.format("%s = '%d-%d-%d'", field.getName(), date.getYear(), date.getMonthValue(),
+							date.getDayOfMonth()));
+					return;
+				}
+				if (value instanceof LocalTime) {
+					var time = (LocalTime) value;
+					fieldSetterList.add(String.format("%s = '%d:%d:%d'", field.getName(), time.getHour(), time.getMinute(), time.getSecond()));
+					return;
+				}
+				fieldSetterList.add(field.getName() + " = " + value);
 			} catch (IllegalAccessException e) {
-				System.err.printf("Error getting value for field %s from type %s\n", x.getName(), typeName);
+				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), typeName);
 			}
 		});
 		updateQuery.append(String.join(", ", fieldSetterList))
@@ -194,7 +246,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void delete(long id) {
 		try (var connection = new DBConnection()) {
-			boolean success = connection.update("delete from " + tableName + " where id=?", id);
+			boolean success = connection.update(String.format("delete from `%s` where id=?", tableName), id);
 			if (success) {
 				Utilities.logf("%s with id %d successfully deleted!", typeName, id);
 			}

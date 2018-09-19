@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.utilities;
 
+import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.ForeignKeyObject;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 
@@ -52,7 +53,7 @@ public class Utilities {
 	 * @param text The message to print.
 	 */
 	public static void log(Object text) {
-		if (SystemParameter.LOG_QUERIES) {
+		if (DBConnection.LOG_QUERIES) {
 			System.out.println(text);
 		}
 	}

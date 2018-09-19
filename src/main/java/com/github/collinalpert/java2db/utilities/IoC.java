@@ -24,7 +24,7 @@ public class IoC {
 	}
 
 	/**
-	 * Resolves any class.
+	 * Creates an instance of any class with an empty constructor.
 	 *
 	 * @param clazz The class to be constructed.
 	 * @param <E>   The type of the entity.
@@ -42,7 +42,8 @@ public class IoC {
 	}
 
 	/**
-	 * Resolves a service class. This is to prevent multiple instances of a service. Only one is needed in the lifecycle of an application.
+	 * Resolves a service class. This is to prevent multiple instances of a service.
+	 * Only one is needed in the lifecycle of an application.
 	 *
 	 * @param clazz The service class to retrieve.
 	 * @param <E>   The type of the service class's entity.
@@ -61,8 +62,8 @@ public class IoC {
 	 * Resolves a service class by the entity it was registered with.
 	 *
 	 * @param clazz The entity class corresponding to a service class.
-	 * @param <E> The type of the entity.
-	 * @param <S> The type of the service.
+	 * @param <E>   The type of the entity.
+	 * @param <S>   The type of the service.
 	 * @return An instance of a previously registered service class.
 	 */
 	public static <E extends BaseEntity, S extends BaseService<E>> S resolveServiceByEntity(Class<E> clazz) {
@@ -85,23 +86,11 @@ public class IoC {
 	}
 
 	/**
-	 * Adds a query constraint to a query made with a certain entity.
-	 * This means that any query made with this entity will include this {@code predicate}.
-	 *
-	 * @param clazz     The entity to add the constraint to.
-	 * @param predicate The constraint.
-	 * @param <E> The type of the entity.
-	 */
-	public static <E extends BaseEntity> void addConstraint(Class<E> clazz, SqlPredicate<E> predicate) {
-		selectConstraints.put(clazz, predicate);
-	}
-
-	/**
 	 * Checks if a service has already been registered.
 	 *
 	 * @param clazz The class os the service.
-	 * @param <E> The type of the entity.
-	 * @param <S> The type of the service.
+	 * @param <E>   The type of the entity.
+	 * @param <S>   The type of the service.
 	 * @return {@code True} if an instance of the service is registered, {@code false} if not.
 	 */
 	public <E extends BaseEntity, S extends BaseService<E>> boolean isRegistered(Class<S> clazz) {
@@ -123,5 +112,17 @@ public class IoC {
 		}
 		Class<? super E> superClass = clazz.getSuperclass();
 		return selectConstraints.getOrDefault(clazz, x -> true).and(getConstraints(superClass));
+	}*/
+
+	/*
+	 * Adds a query constraint to a query made with a certain entity.
+	 * This means that any query made with this entity will include this {@code predicate}.
+	 *
+	 * @param clazz     The entity to add the constraint to.
+	 * @param predicate The constraint.
+	 * @param <E> The type of the entity.
+	 *
+	public static <E extends BaseEntity> void addConstraint(Class<E> clazz, SqlPredicate<E> predicate) {
+		selectConstraints.put(clazz, predicate);
 	}*/
 }

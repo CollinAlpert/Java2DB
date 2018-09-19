@@ -1,6 +1,5 @@
 package com.github.collinalpert.java2db.database;
 
-import com.github.collinalpert.java2db.utilities.SystemParameter;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
@@ -18,35 +17,43 @@ public class DBConnection implements AutoCloseable {
 	private Connection connection = null;
 	private boolean isConnectionValid;
 
+	public static String HOST;
+	public static String DATABASE;
+	public static String USERNAME;
+	public static String PASSWORD;
+	public static DatabaseTypes DATABASE_TYPE;
+	public static int PORT;
+	public static boolean LOG_QUERIES = true;
+
 	public DBConnection() {
 		try {
 			String driver;
 			String connectionString;
-			if (SystemParameter.PORT == 0) {
-				switch (SystemParameter.DATABASE_TYPE) {
+			if (PORT == 0) {
+				switch (DATABASE_TYPE) {
 					case MICROSOFT:
-						SystemParameter.PORT = 1433;
+						PORT = 1433;
 						break;
 					case MYSQL:
 					default:
-						SystemParameter.PORT = 3306;
+						PORT = 3306;
 						break;
 				}
 			}
-			switch (SystemParameter.DATABASE_TYPE) {
+			switch (DATABASE_TYPE) {
 				case MICROSOFT:
 					driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-					connectionString = "jdbc:sqlserver://" + SystemParameter.HOST + ":" + SystemParameter.PORT + ";databaseName=" + SystemParameter.DATABASE;
+					connectionString = "jdbc:sqlserver://" + HOST + ":" + PORT + ";databaseName=" + DATABASE;
 					break;
 				case MYSQL:
 				default:
 					driver = "com.mysql.cj.jdbc.Driver";
-					connectionString = "jdbc:mysql://" + SystemParameter.HOST + ":" + SystemParameter.PORT + "/" + SystemParameter.DATABASE + "?serverTimezone=UTC";
+					connectionString = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DATABASE + "?serverTimezone=UTC";
 					break;
 			}
 			Class.forName(driver);
 			DriverManager.setLoginTimeout(5);
-			connection = DriverManager.getConnection(connectionString, SystemParameter.USERNAME, SystemParameter.PASSWORD);
+			connection = DriverManager.getConnection(connectionString, USERNAME, PASSWORD);
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {
 			System.err.println("The connection to the database failed. Please check if the MySQL server is reachable and if you have an internet connection.");
