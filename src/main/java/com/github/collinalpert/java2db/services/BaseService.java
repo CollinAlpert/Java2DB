@@ -10,10 +10,12 @@ import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -51,12 +53,11 @@ public class BaseService<T extends BaseEntity> {
 	//region Create
 
 	/**
-	 * Creates a Java entity on the database.
+	 * Creates this Java entity on the database.
 	 *
 	 * @param instance The instance to create on the database.
-	 * @return {@code True} if the INSERT was successful, {@code false} if not.
 	 */
-	public boolean create(T instance) {
+	public void create(T instance) throws SQLException {
 		var insertQuery = new StringBuilder("insert into `").append(tableName).append("` (");
 		var databaseFields = Utilities.getAllFields(instance).stream().map(Field::getName).collect(Collectors.joining(", "));
 		insertQuery.append(databaseFields).append(") values");
@@ -104,13 +105,8 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(" (").append(String.join(", ", values)).append(")");
 		Utilities.log(insertQuery.toString());
 		try (var connection = new DBConnection()) {
-			if (connection.update(insertQuery.toString())) {
-				Utilities.logf("%s successfully created!", typeName);
-				return true;
-			} else {
-				System.err.printf("Unable to create type %s.\n", typeName);
-				return false;
-			}
+			connection.update(insertQuery.toString());
+			Utilities.logf("%s successfully created!", typeName);
 		}
 	}
 	//endregion
@@ -122,29 +118,43 @@ public class BaseService<T extends BaseEntity> {
 	 * @param connection A connection to execute the query on.
 	 * @return A {@link ResultSet} by a predicate.
 	 */
-	protected ResultSet getByPredicate(SqlPredicate<T> predicate, DBConnection connection) {
-		var query = "select * from " + tableName + " where " + Lambda2Sql.toSql(predicate);
+	private ResultSet getByPredicate(SqlPredicate<T> predicate, DBConnection connection) throws SQLException {
+		var query = String.format("select * from `%s` where %s", tableName, Lambda2Sql.toSql(predicate));
 		Utilities.log(query);
 		return connection.execute(query);
 	}
 
 	/**
+	 * Retrieves a single entity which matches the predicate.
+	 * It is {@code protected} as it is only meant for use in methods of the respective service.
+	 * This is to keep good programming practice and create descriptive methods for what kind of data you are getting.
+	 *
 	 * @param predicate The {@link SqlPredicate} to add constraints to a SELECT query.
 	 * @return An entity matching the result of the query.
 	 */
-	public Optional<T> getSingle(SqlPredicate<T> predicate) {
+	protected Optional<T> getSingle(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
 			return mapper.map(getByPredicate(predicate, connection));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Optional.empty();
 		}
 	}
 
 	/**
+	 * Retrieves list of entities which match the predicate.
+	 * It is {@code protected} as it is only meant for use in methods of the respective service.
+	 * This is to keep good programming practice and create descriptive methods for what kind of data you are getting.
+	 *
 	 * @param predicate The {@link SqlPredicate} to add constraints to a SELECT query.
 	 * @return A list of entities matching the result of the query.
 	 */
-	public List<T> getMultiple(SqlPredicate<T> predicate) {
+	protected List<T> getMultiple(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
 			return mapper.mapToList(getByPredicate(predicate, connection));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Collections.emptyList();
 		}
 	}
 
@@ -167,12 +177,11 @@ public class BaseService<T extends BaseEntity> {
 	//region Update
 
 	/**
-	 * Applies updates to an entity on the database.
+	 * Updates this entity's row on the database.
 	 *
-	 * @param instance The instance to update on the interface.
-	 * @return {@code True} if the update is successful, {@code false} if not.
+	 * @param instance The instance to update on the database.
 	 */
-	public boolean update(T instance) {
+	public void update(T instance) throws SQLException {
 		var updateQuery = new StringBuilder("update `").append(tableName).append("` set ");
 		ArrayList<String> fieldSetterList = new ArrayList<>();
 		Utilities.getAllFields(instance, BaseEntity.class).forEach(field -> {
@@ -217,13 +226,8 @@ public class BaseService<T extends BaseEntity> {
 				.append(" where id = ").append(instance.getId());
 		Utilities.log(updateQuery.toString());
 		try (var connection = new DBConnection()) {
-			if (connection.update(updateQuery.toString())) {
-				Utilities.logf("%s with id %d was successfully updated", typeName, instance.getId());
-				return true;
-			} else {
-				System.err.printf("%s with id %d could not be updated\n", typeName, instance.getId());
-				return false;
-			}
+			connection.update(updateQuery.toString());
+			Utilities.logf("%s with id %d was successfully updated", typeName, instance.getId());
 		}
 	}
 	//endregion
@@ -246,10 +250,10 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void delete(long id) {
 		try (var connection = new DBConnection()) {
-			boolean success = connection.update(String.format("delete from `%s` where id=?", tableName), id);
-			if (success) {
-				Utilities.logf("%s with id %d successfully deleted!", typeName, id);
-			}
+			connection.update(String.format("delete from `%s` where id=?", tableName), id);
+			Utilities.logf("%s with id %d successfully deleted!", typeName, id);
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 	//endregion

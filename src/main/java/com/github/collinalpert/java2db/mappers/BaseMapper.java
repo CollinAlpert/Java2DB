@@ -90,10 +90,15 @@ public class BaseMapper<T extends BaseEntity> {
 			for (var field : fields) {
 				field.setAccessible(true);
 				if (field.getAnnotation(ForeignKeyObject.class) != null) {
-					var fkObject = field.getAnnotation(ForeignKeyObject.class);
+					ForeignKeyObject fkObjectNumber = field.getAnnotation(ForeignKeyObject.class);
 					Class<?> clz = foreignKeyObjects.keySet().stream().filter(x -> x == field.getType()).findFirst().orElseThrow();
 					var service = IoC.resolveServiceByEntity((Class<? extends BaseEntity>) clz);
-					field.set(entity, service.getById(foreignKeys.get(fkObject.value())));
+					var fkObject = service.getById(foreignKeys.get(fkObjectNumber.value()));
+					if (fkObject.isPresent()) {
+						field.set(entity, fkObject.get());
+					} else {
+						System.err.printf("Could not set type %s with name %s\n", field.getType(), field.getName());
+					}
 					continue;
 				}
 				var value = set.getObject(field.getName(), field.getType());

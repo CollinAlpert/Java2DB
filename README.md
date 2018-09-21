@@ -11,12 +11,12 @@ It is meant for smaller projects which want to interact with their database in a
 but easy way without bloating the source code with SQL queries.
 
 ### How it works
- Java classes (entities) model tables on the database and their fields. 
- Every class has a corresponding service class, which acts as a data 
- service and interacts with the database. The service classes will fill an entity with values from the database. 
- Which values should be fetched, can be defined inside the services. 
+Java classes (entities) model tables on the database and their fields. 
+Every class has a corresponding service class, which acts as a data 
+service and interacts with the database. The service classes will fill an entity with values from the database. 
+Which values should be fetched, can be defined inside the services. 
 
-### Example
+### Usage/Example
 Lets say we have a database with two tables with the following structure:
 
 ``gender``\
@@ -79,7 +79,8 @@ public class PersonService extends BaseService<Person> {
 Every service *must* extend ``BaseService``.
 
 That's it! Now we can access the database using the services with simple predefined methods like ``getById`` and so on. 
-Custom methods can be defined in the respective service. 
+Custom methods can be defined in the respective service using the 
+``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class.
 
 ### Getting started
 
@@ -88,13 +89,12 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>1.5.1</version>
+    <version>1.5.2</version>
 </dependency>
 ```
- Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
+Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
 1. Connect to the database. Set the static variables ``HOST``, ``DATABASE``, ``USERNAME``, ``PASSWORD`` and optionally ``DATABASE_TYPE`` and ``PORT`` of the `DBConnection` class to achieve possibility of connection.
 2. Register an instance of all of your services. Use the ``IoC.registerService`` method to do this. Using the above example, it would look something like this: ``IoC.registerService(Person.class, new PersonService());``.
 
-To retrieve an instance of a service, use the ``IoC.resolveService`` method.\
-If you would not like your queries logged in the console, call the ``DBConnection.LOG_QUERIES = false;`` statement at the beginning of your application.  
-  
+As the services should follow the singleton pattern, you should retrieve an instance of a service using the ``IoC.resolveService`` method.\
+If you would not like your queries logged in the console, use the ``DBConnection.LOG_QUERIES = false;`` statement.  

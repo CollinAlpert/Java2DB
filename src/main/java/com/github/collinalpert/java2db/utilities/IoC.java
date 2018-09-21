@@ -42,8 +42,8 @@ public class IoC {
 	}
 
 	/**
-	 * Resolves a service class. This is to prevent multiple instances of a service.
-	 * Only one is needed in the lifecycle of an application.
+	 * Resolves a service class. This is to preserve the singleton pattern.
+	 * Only one instance of a service is needed in the lifecycle of an application.
 	 *
 	 * @param clazz The service class to retrieve.
 	 * @param <E>   The type of the service class's entity.

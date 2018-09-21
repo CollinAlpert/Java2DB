@@ -14,9 +14,6 @@ import java.sql.Statement;
  * @see <a href="https://github.com/CollinAlpert/APIs/blob/master/de/collin/DBConnection.java">GitHub</a>
  */
 public class DBConnection implements AutoCloseable {
-	private Connection connection = null;
-	private boolean isConnectionValid;
-
 	public static String HOST;
 	public static String DATABASE;
 	public static String USERNAME;
@@ -24,6 +21,9 @@ public class DBConnection implements AutoCloseable {
 	public static DatabaseTypes DATABASE_TYPE;
 	public static int PORT;
 	public static boolean LOG_QUERIES = true;
+
+	private Connection connection;
+	private boolean isConnectionValid;
 
 	public DBConnection() {
 		try {
@@ -76,83 +76,63 @@ public class DBConnection implements AutoCloseable {
 
 
 	/**
-	 * Executes an SELECT SQL statement on the database without Java parameters.
+	 * Executes a DQL statement on the database without Java parameters.
 	 *
 	 * @param query The query to be executed.
 	 * @return The {@link ResultSet} containing the result from the SELECT query.
+	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
-	public ResultSet execute(String query) {
-		try {
-			Statement statement = connection.createStatement();
-			var set = statement.executeQuery(query);
-			statement.closeOnCompletion();
-			return set;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return null;
-		}
+	public ResultSet execute(String query) throws SQLException {
+		Statement statement = connection.createStatement();
+		var set = statement.executeQuery(query);
+		statement.closeOnCompletion();
+		return set;
 	}
 
 	/**
-	 * Executes an SELECT SQL statement on the database with Java parameters.
+	 * Executes a DQL statement on the database with Java parameters.
 	 *
 	 * @param query  The query to be executed.
 	 * @param params The Java parameters to be inserted into the query.
 	 * @return The {@link ResultSet} containing the result from the SELECT query.
+	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
-	public ResultSet execute(String query, Object... params) {
-		try {
-			var statement = connection.prepareStatement(query);
-			for (int i = 0; i < params.length; i++) {
-				statement.setObject(i + 1, params[i]);
-			}
-			var set = statement.executeQuery();
-			statement.closeOnCompletion();
-			return set;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return null;
+	public ResultSet execute(String query, Object... params) throws SQLException {
+		var statement = connection.prepareStatement(query);
+		for (int i = 0; i < params.length; i++) {
+			statement.setObject(i + 1, params[i]);
 		}
+		var set = statement.executeQuery();
+		statement.closeOnCompletion();
+		return set;
 	}
 
 	/**
-	 * This command is used for any queries that are supposed to update the database, such as UPDATE, DELETE, TRUNCATE etc.
+	 * This command is used for any DDL/DML queries.
 	 *
 	 * @param query The query to be executed.
-	 * @return {@code True} if the update was successful, {@code false} if not.
+	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
-	public boolean update(String query) {
-		try {
-			var statement = connection.createStatement();
-			statement.executeUpdate(query);
-			statement.closeOnCompletion();
-			return true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return false;
-		}
+	public void update(String query) throws SQLException {
+		var statement = connection.createStatement();
+		statement.executeUpdate(query);
+		statement.closeOnCompletion();
 	}
 
 	/**
-	 * This command is used for any queries that are supposed to update the database, such as UPDATE, DELETE, TRUNCATE etc.
+	 * This command is used for any DDL/DML queries with Java parameters.
 	 *
 	 * @param query  The query to be executed.
 	 * @param params The Java parameters to be inserted into the query.
-	 * @return {@code True} if the update was successful, {@code false} if not.
+	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
-	public boolean update(String query, Object... params) {
-		try {
-			var statement = connection.prepareStatement(query);
-			for (int i = 0; i < params.length; i++) {
-				statement.setObject(i + 1, params[i]);
-			}
-			statement.executeUpdate();
-			statement.closeOnCompletion();
-			return true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return false;
+	public void update(String query, Object... params) throws SQLException {
+		var statement = connection.prepareStatement(query);
+		for (int i = 0; i < params.length; i++) {
+			statement.setObject(i + 1, params[i]);
 		}
+		statement.executeUpdate();
+		statement.closeOnCompletion();
 	}
 
 	/**
