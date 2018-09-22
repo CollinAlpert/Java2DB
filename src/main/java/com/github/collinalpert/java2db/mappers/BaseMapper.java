@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * @author Collin Alpert
@@ -60,10 +59,10 @@ public class BaseMapper<T extends BaseEntity> {
 	 * @return A list of Java entities.
 	 */
 	public List<T> mapToList(ResultSet set) {
-		List<T> list = new ArrayList<>();
+		var list = new ArrayList<T>();
 		try {
 			while (set.next()) {
-				T entity = IoC.resolve(clazz);
+				var entity = IoC.resolve(clazz);
 				setFields(set, entity);
 				list.add(entity);
 			}
@@ -86,33 +85,35 @@ public class BaseMapper<T extends BaseEntity> {
 		var fields = Utilities.getAllFields(entity, true);
 		try {
 			var foreignKeys = getForeignKeys(fields, set);
-			var foreignKeyObjects = getForeignKeyObjects(fields);
 			for (var field : fields) {
 				field.setAccessible(true);
-				if (field.getAnnotation(ForeignKeyObject.class) != null) {
-					ForeignKeyObject fkObjectNumber = field.getAnnotation(ForeignKeyObject.class);
-					Class<?> clz = foreignKeyObjects.keySet().stream().filter(x -> x == field.getType()).findFirst().orElseThrow();
-					var service = IoC.resolveServiceByEntity((Class<? extends BaseEntity>) clz);
-					var fkObject = service.getById(foreignKeys.get(fkObjectNumber.value()));
-					if (fkObject.isPresent()) {
-						field.set(entity, fkObject.get());
-					} else {
-						System.err.printf("Could not set type %s with name %s\n", field.getType(), field.getName());
+				ForeignKeyObject foreignKeyObject;
+				if ((foreignKeyObject = field.getAnnotation(ForeignKeyObject.class)) != null) {
+					if (!BaseEntity.class.isAssignableFrom(field.getType())) {
+						throw new IllegalArgumentException(String.format("Foreign key object %s with id %d does not extend BaseEntity.", field.getType(), foreignKeyObject.value()));
 					}
+					var service = IoC.resolveServiceByEntity((Class<? extends BaseEntity>) field.getType());
+					var optionalEntity = service.getById(foreignKeys.get(foreignKeyObject.value()));
+					if (!optionalEntity.isPresent()) {
+						System.err.printf("Could not set type %s with name %s\n", field.getType(), field.getName());
+						continue;
+					}
+					field.set(entity, optionalEntity.get());
 					continue;
 				}
 				var value = set.getObject(field.getName(), field.getType());
 				field.set(entity, value);
-
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
+			//TODO add possibility of custom mapping classes.
 			throw new IllegalArgumentException("Cannot use base mapping. Please define custom mapping in according mapping class.");
 		}
 	}
 
+
 	/**
-	 * @param fields List of fields to get the foreign key annotations from.
+	 * @param fields Map of fields to get the foreign key annotations from.
 	 * @param set    The {@link ResultSet} is needed to get the actual foreign key.
 	 * @return A {@link Map} where the keys are the id number of this foreign key and the values are the actual foreign keys.
 	 * @throws SQLException when the foreign key in the {@link ResultSet} does not exist.
@@ -126,16 +127,5 @@ public class BaseMapper<T extends BaseEntity> {
 			}
 		}
 		return map;
-	}
-
-	/**
-	 * Gets the classes of all fields that represent a foreign key object, i.e. do not exist on the database.
-	 *
-	 * @param fields A list of fields to get the foreign key objects from.
-	 * @return A {@link Map} where the keys are the classes of the foreign keys and the value is the id number for this foreign key.
-	 */
-	private Map<Class<?>, Integer> getForeignKeyObjects(ArrayList<Field> fields) {
-		return fields.stream().filter(field -> field.getAnnotation(ForeignKeyObject.class) != null)
-				.collect(Collectors.toMap(Field::getType, field -> field.getAnnotation(ForeignKeyObject.class).value()));
 	}
 }

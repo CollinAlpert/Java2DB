@@ -56,6 +56,8 @@ public class BaseService<T extends BaseEntity> {
 	 * Creates this Java entity on the database.
 	 *
 	 * @param instance The instance to create on the database.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void create(T instance) throws SQLException {
 		var insertQuery = new StringBuilder("insert into `").append(tableName).append("` (");
@@ -180,6 +182,8 @@ public class BaseService<T extends BaseEntity> {
 	 * Updates this entity's row on the database.
 	 *
 	 * @param instance The instance to update on the database.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(T instance) throws SQLException {
 		var updateQuery = new StringBuilder("update `").append(tableName).append("` set ");
