@@ -15,6 +15,16 @@ public class BaseEntity {
 		return id;
 	}
 
+	/**
+	 * This setter only exists for frameworks like Spring, where a form needs to set this id.
+	 * It is <b>greatly</b> discouraged from using this setter directly.
+	 *
+	 * @param id The it of the entity.
+	 */
+	public void setId(long id) {
+		this.id = id;
+	}
+
 	@Override
 	public String toString() {
 		return "Id: " + id;
