@@ -1,6 +1,5 @@
-package com.github.collinalpert.java2db.utilities;
+package com.github.collinalpert.java2db.functions;
 
-import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -11,12 +10,10 @@ import java.util.function.Predicate;
  * </p>
  */
 @FunctionalInterface
-public interface SqlPredicate<T> extends Predicate<T>, Serializable {
-
-	boolean test(T t);
+public interface SqlPredicate<T> extends Predicate<T>, SerializedFunctionalInterface {
 
 	default SqlPredicate<T> and(SqlPredicate<? super T> other) {
 		Objects.requireNonNull(other);
-		return (t) -> test(t) && other.test(t);
+		return t -> test(t) && other.test(t);
 	}
 }

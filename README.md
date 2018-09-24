@@ -81,6 +81,12 @@ Every service *must* extend ``BaseService``.
 That's it! Now we can access the database using the services with simple predefined methods like ``getById`` and so on. 
 Custom methods can be defined in the respective service using the 
 ``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class.
+ 
+Additionally, if you would like some more options with DQL statements, the ``BaseService`` class provides methods like 
+``selectQuery`` or ``subSelectQuery`` with which you can build queries using methods like ``where``, ``orderBy`` and ``limit``. 
+
+All these methods can only be used by methods in the respective service classes.
+This is because every service should have descriptive methods for any data they get. 
 
 ### Getting started
 
@@ -89,7 +95,7 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>1.5.4</version>
+    <version>2.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):

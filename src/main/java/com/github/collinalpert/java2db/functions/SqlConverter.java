@@ -1,4 +1,4 @@
-package com.github.collinalpert.java2db.utilities;
+package com.github.collinalpert.java2db.functions;
 
 import com.trigersoft.jaque.expression.BinaryExpression;
 import com.trigersoft.jaque.expression.ConstantExpression;

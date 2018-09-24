@@ -79,7 +79,7 @@ public class DBConnection implements AutoCloseable {
 	 * Executes a DQL statement on the database without Java parameters.
 	 *
 	 * @param query The query to be executed.
-	 * @return The {@link ResultSet} containing the result from the SELECT query.
+	 * @return The {@link ResultSet} containing the result from the DQL statement.
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public ResultSet execute(String query) throws SQLException {
@@ -94,7 +94,7 @@ public class DBConnection implements AutoCloseable {
 	 *
 	 * @param query  The query to be executed.
 	 * @param params The Java parameters to be inserted into the query.
-	 * @return The {@link ResultSet} containing the result from the SELECT query.
+	 * @return The {@link ResultSet} containing the result from the DQL statement.
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public ResultSet execute(String query, Object... params) throws SQLException {
