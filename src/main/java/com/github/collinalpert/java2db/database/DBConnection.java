@@ -3,6 +3,7 @@ package com.github.collinalpert.java2db.database;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
+import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -13,7 +14,7 @@ import java.sql.Statement;
  * @author Collin Alpert
  * @see <a href="https://github.com/CollinAlpert/APIs/blob/master/de/collin/DBConnection.java">GitHub</a>
  */
-public class DBConnection implements AutoCloseable {
+public class DBConnection implements Closeable {
 	public static String HOST;
 	public static String DATABASE;
 	public static String USERNAME;

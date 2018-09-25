@@ -98,7 +98,7 @@ First, include the Maven artifact:
     <version>2.0</version>
 </dependency>
 ```
-Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
+Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
 1. Connect to the database. Set the static variables ``HOST``, ``DATABASE``, ``USERNAME``, ``PASSWORD`` and optionally ``DATABASE_TYPE`` and ``PORT`` of the `DBConnection` class to achieve possibility of connection.
 2. Register an instance of all of your services. Use the ``IoC.registerService`` method to do this. Using the above example, it would look something like this: ``IoC.registerService(Person.class, new PersonService());``.
 

@@ -3,10 +3,10 @@ package com.github.collinalpert.java2db.services;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.TableName;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.functions.SqlPredicate;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.Utilities;
+import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
 import java.sql.SQLException;
 import java.time.LocalDate;

@@ -1,8 +1,8 @@
 package com.github.collinalpert.java2db.utilities;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.functions.SqlPredicate;
 import com.github.collinalpert.java2db.services.BaseService;
+import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -89,7 +89,7 @@ public class IoC {
 	 * Retrieves a composition {@link SqlPredicate} for all constraints that have been added for this class or any superclass of this class.
 	 *
 	 * @param clazz The class to retrieve query constraints from.
-	 * @param <E> The type of the class to get the constraints for.
+	 * @param <E>   The type of the class to get the constraints for.
 	 * @return A {@link SqlPredicate} describing the added constraints.
 	 */
 	@SuppressWarnings("unchecked")
@@ -110,6 +110,7 @@ public class IoC {
 	 * @param predicate The constraint.
 	 * @param <E>       The type of the entity.
 	 */
+	@SuppressWarnings("unchecked")
 	public static <E extends BaseEntity> void addConstraint(Class<E> clazz, SqlPredicate<E> predicate) {
 		if (selectConstraints.containsKey(clazz)) {
 			var existingPredicate = (SqlPredicate<E>) selectConstraints.get(clazz);
