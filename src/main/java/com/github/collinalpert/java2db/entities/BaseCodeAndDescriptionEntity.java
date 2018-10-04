@@ -1,10 +1,9 @@
 package com.github.collinalpert.java2db.entities;
 
 /**
- * @author Collin Alpert
- * <p>
  * Describes an entity that has an id, a code and a description.
- * </p>
+ *
+ * @author Collin Alpert
  */
 public class BaseCodeAndDescriptionEntity extends BaseEntity {
 	private String code;

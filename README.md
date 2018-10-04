@@ -5,8 +5,8 @@ While this library may not offer the most fancy features or allow
 you to fire huge queries to your database, that is not what it is intended for. 
 It is lightweight and meant for a quick and simple access to your database.
 
-**Please note:** This is a Java 10 library. Make sure you have Java 10 installed when using this library. 
-This library is not suitable for projects requiring complex SQL queries. 
+**Please note:** This is a Java 11 library. Make sure you have Java 11 installed when using this library. 
+This library is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.
 It is meant for smaller projects which want to interact with their database in a simple, 
 but easy way without bloating the source code with SQL queries.
 
@@ -22,11 +22,13 @@ Lets say we have a database with two tables with the following structure:
 ``gender``\
 &nbsp;&nbsp;&nbsp;&nbsp;``id``\
 &nbsp;&nbsp;&nbsp;&nbsp;``code``\
-&nbsp;&nbsp;&nbsp;&nbsp;``description``  
+&nbsp;&nbsp;&nbsp;&nbsp;``description``\
+&nbsp;&nbsp;&nbsp;&nbsp;``isBinary``
 
 ``person``\
 &nbsp;&nbsp;&nbsp;&nbsp;``id``\
 &nbsp;&nbsp;&nbsp;&nbsp;``name``\
+&nbsp;&nbsp;&nbsp;&nbsp;``age``\
 &nbsp;&nbsp;&nbsp;&nbsp;``genderId``(foreign key to `id` column of `gender`)
 
 Then we would need two entities:
@@ -34,11 +36,16 @@ Then we would need two entities:
 ```java
 @TableName("gender")
 public class Gender extends BaseCodeAndDescriptionEntity {
-	// In this case, BaseCodeAndDescriptionEntity 
-	// gives us all the columns we need. 
-	// If the table grows, we can always add more fields. 
+	// In this case, BaseCodeAndDescriptionEntity gives us the id, the code and the description.
+	// We need to add the rest.
+	
+	private boolean isBinary;
+	
+	// Getters and setters...
 }
+```
 
+```java
 @TableName("person")
 public class Person extends BaseEntity {
 	// In this case, BaseEntity only gives us an id field. 
@@ -46,33 +53,34 @@ public class Person extends BaseEntity {
 	
 	private String name;
 	
-	// The number only needs to correspond with the number of the foreign key object. 
-	@ForeignKey(1)   
+	private int age;
+	
 	private int genderId;
 	
-	// That way Java2DB will know from which foreign key to fill this Gender entity from.
-	@ForeignKeyObject(1)
+	// That way Java2DB will know that this field does not exist on the database.
+	// It will be filled accordingly.
+	@ForeignKeyObject("genderId")
 	private Gender gender;
 	
-	//Getters and setters...
+	// Getters and setters...
+	// Note that it is not suggested for foreign key entities to have setters. 
+	// They are effectively useless.
 }
 ```
 
-Every entity *must* extend ``BaseEntity``.
+Every entity *must* extend ``BaseEntity`` and have an empty constructor.
 
-Then we can go ahead and create the service classes:
+Then we can go ahead and create the (for now) empty service classes:
 
 ```java
 public class GenderService extends BaseService<Gender> {
-	public GenderService(){
-	    super(Gender.class);	
-	}
+	
 }
+```
 
+```java
 public class PersonService extends BaseService<Person> {
-	public PersonService() {
-		super(Person.class);
-	}
+	
 }
 ```
 
@@ -80,13 +88,28 @@ Every service *must* extend ``BaseService``.
 
 That's it! Now we can access the database using the services with simple predefined methods like ``getById`` and so on. 
 Custom methods can be defined in the respective service using the 
-``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class.
- 
-Additionally, if you would like some more options with DQL statements, the ``BaseService`` class provides methods like 
-``selectQuery`` or ``subSelectQuery`` with which you can build queries using methods like ``where``, ``orderBy`` and ``limit``. 
+``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class. 
+When using ``getMultiple`` method, you can use some more query options, like ``where``, ``orderBy`` and ``limit`` 
+in the returned ``Query`` object.
 
 All these methods can only be used by methods in the respective service classes.
-This is because every service should have descriptive methods for any data they get. 
+This is because every service should have descriptive methods for any data they get.
+
+The current version also offers full support for default query constraints. 
+This means you can tell Java2DB to execute a certain WHERE condition on *every* query that is executed on a specific table.
+Here's an example: Say every query executed on the ``person`` table should only return people of age
+18 and older and with an id greater than 0 (just because). This can be achieved adding query constraints using the ``QueryConstraints`` class.
+In our case, this would look something like this:
+
+```java
+public class Main {
+	public static void main(String[] args){
+	    // register the services and all that
+	    QueryConstraints.addConstraint(Person.class, person -> person.getAge() >= 18);
+	    QueryConstraints.addConstraint(Person.class, person -> person.getId() >= 0);
+	}
+}
+```
 
 ### Getting started
 
@@ -95,10 +118,10 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.0</version>
+    <version>2.1</version>
 </dependency>
 ```
-Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start (or whenever you feel like it, it just may not work then):
+Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start:
 1. Connect to the database. Set the static variables ``HOST``, ``DATABASE``, ``USERNAME``, ``PASSWORD`` and optionally ``DATABASE_TYPE`` and ``PORT`` of the `DBConnection` class to achieve possibility of connection.
 2. Register an instance of all of your services. Use the ``IoC.registerService`` method to do this. Using the above example, it would look something like this: ``IoC.registerService(Person.class, new PersonService());``.
 

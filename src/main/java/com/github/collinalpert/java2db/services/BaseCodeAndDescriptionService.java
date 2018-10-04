@@ -6,16 +6,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * @author Collin Alpert
- * <p>
  * Describes a service class for an entity which contains an id, a code and a description.
- * </p>
+ *
+ * @author Collin Alpert
  */
 public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntity> extends BaseService<T> {
-
-	public BaseCodeAndDescriptionService(Class<T> clazz) {
-		super(clazz);
-	}
 
 	/**
 	 * @param code The code to get the entity from.

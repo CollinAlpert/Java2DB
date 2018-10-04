@@ -1,10 +1,9 @@
 package com.github.collinalpert.java2db.database;
 
 /**
+ * Enum for all database types this library supports.
+ *
  * @author Collin Alpert
- * <p>
- * Enum for all supported database types of this library.
- * </p>
  */
 public enum DatabaseTypes {
 	MYSQL, MICROSOFT

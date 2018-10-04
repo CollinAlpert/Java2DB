@@ -2,7 +2,6 @@ package com.github.collinalpert.java2db.utilities;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.services.BaseService;
-import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -10,18 +9,16 @@ import java.util.Map;
 
 /**
  * @author Collin Alpert
- * <p>
- * A <pre>Inversion of Control</pre> class.
- * It is responsible for registering services, resolving services and administrating default query constraints.
+ * An <pre>Inversion of Control</pre> container.
+ * It is responsible for registering and resolving services.
  */
 public class IoC {
 
 	private static Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
-	private static Map<Class<? extends BaseEntity>, SqlPredicate<? extends BaseEntity>> selectConstraints;
+
 
 	static {
 		services = new HashMap<>();
-		selectConstraints = new HashMap<>();
 	}
 
 	/**
@@ -66,6 +63,7 @@ public class IoC {
 	 * @param <S>   The type of the service.
 	 * @return An instance of a previously registered service class.
 	 */
+	@SuppressWarnings("unchecked")
 	public static <E extends BaseEntity, S extends BaseService<E>> S resolveServiceByEntity(Class<E> clazz) {
 		if (!services.containsKey(clazz)) {
 			throw new IllegalArgumentException(String.format("An instance of a service for the entity %s has not been registered yet. Please use the \"registerService\" method.", clazz.getSimpleName()));
@@ -83,41 +81,6 @@ public class IoC {
 	 */
 	public static <E extends BaseEntity, S extends BaseService<E>> void registerService(Class<E> clazz, S service) {
 		services.put(clazz, service);
-	}
-
-	/**
-	 * Retrieves a composition {@link SqlPredicate} for all constraints that have been added for this class or any superclass of this class.
-	 *
-	 * @param clazz The class to retrieve query constraints from.
-	 * @param <E>   The type of the class to get the constraints for.
-	 * @return A {@link SqlPredicate} describing the added constraints.
-	 */
-	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> SqlPredicate<E> getConstraints(Class<E> clazz) {
-		if (clazz == BaseEntity.class) {
-			return (SqlPredicate<E>) selectConstraints.getOrDefault(BaseEntity.class, x -> true);
-		}
-		var existingPredicate = (SqlPredicate<E>) selectConstraints.getOrDefault(clazz, x -> true);
-		Class<E> superClass = (Class<E>) clazz.getSuperclass();
-		return existingPredicate.and(getConstraints(superClass));
-	}
-
-	/**
-	 * Adds a query constraint to a query made with a certain entity.
-	 * This means that any query made with this entity will include this {@code predicate}.
-	 *
-	 * @param clazz     The entity to add the constraint to.
-	 * @param predicate The constraint.
-	 * @param <E>       The type of the entity.
-	 */
-	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> void addConstraint(Class<E> clazz, SqlPredicate<E> predicate) {
-		if (selectConstraints.containsKey(clazz)) {
-			var existingPredicate = (SqlPredicate<E>) selectConstraints.get(clazz);
-			selectConstraints.replace(clazz, existingPredicate.and(predicate));
-			return;
-		}
-		selectConstraints.put(clazz, predicate);
 	}
 
 	/**

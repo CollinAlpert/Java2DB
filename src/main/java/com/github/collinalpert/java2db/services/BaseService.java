@@ -1,13 +1,13 @@
 package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.database.DBConnection;
-import com.github.collinalpert.java2db.database.TableName;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.Utilities;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
+import java.lang.reflect.ParameterizedType;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,34 +18,25 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * @author Collin Alpert
- * <p>
  * Class that provides base functionality for all service classes. Every service class must extend this class.
- * </p>
+ *
+ * @author Collin Alpert
  */
 public class BaseService<T extends BaseEntity> {
 
-	private final String typeName;
+	private final Class<T> type;
 	private final String tableName;
-
 	private BaseMapper<T> mapper;
 
-	/**
-	 * Constructor for the base class of all services. It is possible to create instances of it.
-	 *
-	 * @param type The entity class corresponding to this service class.
-	 */
-	public BaseService(Class<T> type) {
-		this.mapper = new BaseMapper<>(type);
-		this.typeName = type.getSimpleName();
-		var tableNameAnnotation = type.getAnnotation(TableName.class);
-		if (tableNameAnnotation == null) {
-			this.tableName = this.typeName.toLowerCase();
-			return;
-		}
-		this.tableName = tableNameAnnotation.value();
-	}
 
+	/**
+	 * Constructor for the base class of all services. It is not possible to create instances of it.
+	 */
+	protected BaseService() {
+		this.type = getGenericType();
+		this.mapper = new BaseMapper<>(type);
+		this.tableName = Utilities.getTableName(type);
+	}
 
 	//region Create
 
@@ -58,10 +49,10 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void create(T instance) throws SQLException {
 		var insertQuery = new StringBuilder("insert into `").append(tableName).append("` (");
-		var databaseFields = Utilities.getAllFields(instance).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
+		var databaseFields = Utilities.getEntityFields(instance.getClass()).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
 		insertQuery.append(databaseFields).append(") values");
 		List<String> values = new ArrayList<>();
-		Utilities.getAllFields(instance, BaseEntity.class).forEach(field -> {
+		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
 				var value = field.get(instance);
@@ -97,7 +88,7 @@ public class BaseService<T extends BaseEntity> {
 				}
 				values.add(value.toString());
 			} catch (IllegalAccessException e) {
-				System.err.printf("Unable to get value from field %s for type %s\n", field.getName(), typeName);
+				System.err.printf("Unable to get value from field %s for type %s\n", field.getName(), type.getSimpleName());
 			}
 		});
 		values.add("default");
@@ -105,7 +96,7 @@ public class BaseService<T extends BaseEntity> {
 		Utilities.log(insertQuery.toString());
 		try (var connection = new DBConnection()) {
 			connection.update(insertQuery.toString());
-			Utilities.logf("%s successfully created!", typeName);
+			Utilities.logf("%s successfully created!", type.getSimpleName());
 		}
 	}
 	//endregion
@@ -115,18 +106,8 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * @return a {@link Query} object with which a DQL statement can be build, using operations like order by, limit etc.
 	 */
-	protected Query<T> selectQuery() {
-		return new Query<>(tableName, mapper);
-	}
-
-	/**
-	 * Creates a DQL statement which contains a sub select.
-	 *
-	 * @param subSelect The sub select to select from.
-	 * @return A {@link Query} object containing the sub select.
-	 */
-	protected Query<T> subSelectQuery(Query<T> subSelect) {
-		return new Query<>(subSelect, mapper);
+	private Query<T> query() {
+		return new Query<>(type, mapper);
 	}
 
 	/**
@@ -138,7 +119,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return An entity matching the result of the query.
 	 */
 	protected Optional<T> getSingle(SqlPredicate<T> predicate) {
-		return new Query<>(tableName, mapper).where(predicate).getFirst();
+		return query().where(predicate).getFirst();
 	}
 
 	/**
@@ -150,7 +131,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list of entities matching the result of the query.
 	 */
 	protected Query<T> getMultiple(SqlPredicate<T> predicate) {
-		return new Query<>(tableName, mapper).where(predicate);
+		return query().where(predicate);
 	}
 
 	/**
@@ -181,7 +162,7 @@ public class BaseService<T extends BaseEntity> {
 	public void update(T instance) throws SQLException {
 		var updateQuery = new StringBuilder("update `").append(tableName).append("` set ");
 		ArrayList<String> fieldSetterList = new ArrayList<>();
-		Utilities.getAllFields(instance, BaseEntity.class).forEach(field -> {
+		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
 				var value = field.get(instance);
@@ -216,7 +197,7 @@ public class BaseService<T extends BaseEntity> {
 				}
 				fieldSetterList.add(String.format("`%s` = %s", field.getName(), value));
 			} catch (IllegalAccessException e) {
-				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), typeName);
+				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), type.getSimpleName());
 			}
 		});
 		updateQuery.append(String.join(", ", fieldSetterList))
@@ -224,7 +205,7 @@ public class BaseService<T extends BaseEntity> {
 		Utilities.log(updateQuery.toString());
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery.toString());
-			Utilities.logf("%s with id %d was successfully updated", typeName, instance.getId());
+			Utilities.logf("%s with id %d was successfully updated", type.getSimpleName(), instance.getId());
 		}
 	}
 	//endregion
@@ -248,10 +229,15 @@ public class BaseService<T extends BaseEntity> {
 	public void delete(long id) {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where id=?", tableName), id);
-			Utilities.logf("%s with id %d successfully deleted!", typeName, id);
+			Utilities.logf("%s with id %d successfully deleted!", type.getSimpleName(), id);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 	//endregion
+
+	@SuppressWarnings("unchecked")
+	private Class<T> getGenericType() {
+		return ((Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);
+	}
 }
