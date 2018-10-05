@@ -141,17 +141,17 @@ public class Query<T extends BaseEntity> {
 		for (var column : columns) {
 			if (column.isForeignKey()) {
 				foreignKeyList.add(new ForeignKeyReference(
-						column.getTableName(),
+						column.getReference(),
 						column.getColumn().getAnnotation(ForeignKeyObject.class).value(),
-						Utilities.getTableName(column.getColumn().getType())
-				));
+						Utilities.getTableName(column.getColumn().getType()),
+						column.getAlias()));
 				continue;
 			}
 			fieldList.add(String.format("%s as %s", column.getSQLNotation(), column.getAliasNotation()));
 		}
 		builder.append(String.join(", ", fieldList)).append(" from `").append(tableName).append("`");
 		for (var foreignKey : foreignKeyList) {
-			builder.append(" inner join ").append(foreignKey.getChildTable()).append(" on ").append(foreignKey.getParentTable()).append(".").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getChildTable()).append(".id");
+			builder.append(" inner join ").append(foreignKey.getChildTable()).append(" ").append(foreignKey.getAlias()).append(" on ").append(foreignKey.getParentClass()).append(".").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
 		}
 		var constraints = QueryConstraints.getConstraints(this.type);
 		if (this.whereClause == null) {

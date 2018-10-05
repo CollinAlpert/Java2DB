@@ -3,7 +3,7 @@ package com.github.collinalpert.java2db.utilities;
 import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
 import com.github.collinalpert.java2db.annotations.TableName;
 import com.github.collinalpert.java2db.database.DBConnection;
-import com.github.collinalpert.java2db.database.TableNameColumn;
+import com.github.collinalpert.java2db.database.TableNameColumnReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 
 import java.lang.reflect.Field;
@@ -55,12 +55,26 @@ public class Utilities {
 	 * @param instanceClass The class to get the fields from.
 	 * @return A list of columns including references to their table.
 	 */
-	public static List<TableNameColumn> getAllFields(Class<? extends BaseEntity> instanceClass) {
-		var fields = new LinkedList<TableNameColumn>();
+	public static List<TableNameColumnReference> getAllFields(Class<? extends BaseEntity> instanceClass) {
+		return getAllFields(instanceClass, "");
+	}
+
+	/**
+	 * Gets all the fields and the fields of foreign key objects in this entity.
+	 *
+	 * @param instanceClass The class to get the fields from.
+	 * @param alias         The alias that nested properties will use.
+	 * @return A list of columns including references to their table.
+	 */
+	public static List<TableNameColumnReference> getAllFields(Class<? extends BaseEntity> instanceClass, String alias) {
+		var fields = new LinkedList<TableNameColumnReference>();
 		for (Field field : getEntityFields(instanceClass, true)) {
-			fields.add(new TableNameColumn(getTableName(instanceClass), field));
 			if (field.getAnnotation(ForeignKeyObject.class) != null) {
-				fields.addAll(getAllFields((Class<? extends BaseEntity>) field.getType()));
+				var tempAlias = UniqueIdentifier.generate(getTableName(field.getType()).substring(0, 1), field.getName());
+				fields.add(new TableNameColumnReference(getTableName(instanceClass), field, tempAlias, alias));
+				fields.addAll(getAllFields((Class<? extends BaseEntity>) field.getType(), tempAlias));
+			} else {
+				fields.add(new TableNameColumnReference(getTableName(instanceClass), field, alias, ""));
 			}
 		}
 		return fields;

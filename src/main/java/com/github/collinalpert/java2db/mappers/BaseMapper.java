@@ -3,6 +3,7 @@ package com.github.collinalpert.java2db.mappers;
 import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.utilities.IoC;
+import com.github.collinalpert.java2db.utilities.UniqueIdentifier;
 import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
@@ -35,11 +36,12 @@ public class BaseMapper<T extends BaseEntity> {
 	public Optional<T> map(ResultSet set) throws SQLException {
 		T entity = IoC.resolve(clazz);
 		try (set) {
-			if (set.next()) {
-				setFields(set, entity);
-			} else {
+			if (!set.next()) {
+				UniqueIdentifier.unset();
 				return Optional.empty();
 			}
+			setFields(set, entity);
+			UniqueIdentifier.unset();
 			return Optional.of(entity);
 		}
 	}
@@ -60,6 +62,7 @@ public class BaseMapper<T extends BaseEntity> {
 				list.add(entity);
 			}
 		}
+		UniqueIdentifier.unset();
 		return list;
 	}
 
@@ -71,6 +74,18 @@ public class BaseMapper<T extends BaseEntity> {
 	 * @param entity The Java entity to fill.
 	 */
 	private <E extends BaseEntity> void setFields(ResultSet set, E entity) throws SQLException {
+		setFields(set, entity, null);
+	}
+
+	/**
+	 * Fills the corresponding fields in an entity based on a {@link ResultSet}.
+	 * If a field is marked as a foreign key object, a new query is started to fill this entity with a value.
+	 *
+	 * @param set        The {@link ResultSet} to get the data from.
+	 * @param identifier The alias set for a certain entity used as a nested property.
+	 * @param entity     The Java entity to fill.
+	 */
+	private <E extends BaseEntity> void setFields(ResultSet set, E entity, String identifier) throws SQLException {
 		var fields = Utilities.getEntityFields(entity.getClass(), true);
 		var tableName = Utilities.getTableName(entity.getClass());
 		for (Field field : fields) {
@@ -81,11 +96,11 @@ public class BaseMapper<T extends BaseEntity> {
 						throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
 					}
 					var foreignKeyObject = IoC.resolve((Class<? extends BaseEntity>) field.getType());
-					setFields(set, foreignKeyObject);
+					setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
 					field.set(entity, foreignKeyObject);
 					continue;
 				}
-				var value = set.getObject(tableName + "_" + field.getName(), field.getType());
+				var value = set.getObject((identifier == null ? tableName : identifier) + "_" + field.getName(), field.getType());
 				field.set(entity, value);
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();

@@ -7,23 +7,35 @@ package com.github.collinalpert.java2db.database;
  */
 public class ForeignKeyReference {
 
-	// The table the foreign key column is in.
-	private final String parentTable;
+	/**
+	 * The table the foreign key column is in.
+	 */
+	private final String parentClass;
 
-	// The foreign key column.
+	/**
+	 * The foreign key column.
+	 */
 	private final String parentForeignKey;
 
-	// The table the foreign key refers to.
+	/**
+	 * The table the foreign key refers to.
+	 */
 	private final String childTable;
 
-	public ForeignKeyReference(String parentTable, String parentForeignKey, String childTable) {
-		this.parentTable = parentTable;
+	/**
+	 * An alias for the joining table.
+	 */
+	private final String alias;
+
+	public ForeignKeyReference(String parentClass, String parentForeignKey, String childTable, String alias) {
+		this.parentClass = parentClass;
 		this.parentForeignKey = parentForeignKey;
 		this.childTable = childTable;
+		this.alias = alias;
 	}
 
-	public String getParentTable() {
-		return parentTable;
+	public String getParentClass() {
+		return parentClass;
 	}
 
 	public String getParentForeignKey() {
@@ -32,5 +44,9 @@ public class ForeignKeyReference {
 
 	public String getChildTable() {
 		return childTable;
+	}
+
+	public String getAlias() {
+		return alias;
 	}
 }
