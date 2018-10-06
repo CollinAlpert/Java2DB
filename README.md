@@ -5,7 +5,7 @@ While this library may not offer the most fancy features or allow
 you to fire huge queries to your database, that is not what it is intended for. 
 It is lightweight and meant for a quick and simple access to your database.
 
-**Please note:** This is a Java 11 library. Make sure you have Java 11 installed when using this library. 
+**Please note:** This is a Java 10 library. Make sure you have Java 10 installed when using this library. 
 This library is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.
 It is meant for smaller projects which want to interact with their database in a simple, 
 but easy way without bloating the source code with SQL queries.
