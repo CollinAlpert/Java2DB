@@ -48,7 +48,7 @@ public class TableNameColumnReference {
 	}
 
 	public String getReference() {
-		return referenceColumn.isBlank() ? tableName : referenceColumn;
+		return referenceColumn.isEmpty() ? tableName : referenceColumn;
 	}
 
 	public String getSQLNotation() {
@@ -64,7 +64,7 @@ public class TableNameColumnReference {
 	}
 
 	public String getIdentifier() {
-		return alias.isBlank() ? tableName : alias;
+		return alias.isEmpty() ? tableName : alias;
 	}
 
 	@Override
