@@ -1,6 +1,7 @@
 package com.github.collinalpert.java2db.utilities;
 
 import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
+import com.github.collinalpert.java2db.annotations.Ignore;
 import com.github.collinalpert.java2db.annotations.TableName;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.TableNameColumnReference;
@@ -41,9 +42,7 @@ public class Utilities {
 		var fields = new LinkedList<Field>();
 		do {
 			fields.addAll(Arrays.asList(instanceClass.getDeclaredFields()));
-			if (!includeForeignKeys) {
-				fields.removeIf(x -> x.getAnnotation(ForeignKeyObject.class) != null);
-			}
+			fields.removeIf(field -> field.getAnnotation(Ignore.class) != null || !includeForeignKeys && field.getAnnotation(ForeignKeyObject.class) != null);
 			instanceClass = instanceClass.getSuperclass();
 		} while (instanceClass != delimiter);
 		return fields;

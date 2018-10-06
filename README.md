@@ -69,6 +69,7 @@ public class Person extends BaseEntity {
 ```
 
 Every entity *must* extend ``BaseEntity`` and have an empty constructor.
+If you want to have a field in your entity that should be ignored by Java2DB, you can use the ``Ignore`` attribute.
 
 Then we can go ahead and create the (for now) empty service classes:
 
@@ -118,7 +119,7 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.2</version>
+    <version>2.2.1</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start:

@@ -136,7 +136,7 @@ public class Query<T extends BaseEntity> {
 		var builder = new StringBuilder("select ");
 		var fieldList = new LinkedList<String>();
 		var foreignKeyList = new LinkedList<ForeignKeyReference>();
-		var tableName = Utilities.getTableName(this.type);
+		var tableName = String.format("`%s`", Utilities.getTableName(this.type));
 		var columns = Utilities.getAllFields(this.type);
 		for (var column : columns) {
 			if (column.isForeignKey()) {
@@ -149,9 +149,9 @@ public class Query<T extends BaseEntity> {
 			}
 			fieldList.add(String.format("%s as %s", column.getSQLNotation(), column.getAliasNotation()));
 		}
-		builder.append(String.join(", ", fieldList)).append(" from `").append(tableName).append("`");
+		builder.append(String.join(", ", fieldList)).append(" from ").append(tableName);
 		for (var foreignKey : foreignKeyList) {
-			builder.append(" inner join ").append(foreignKey.getChildTable()).append(" ").append(foreignKey.getAlias()).append(" on ").append(foreignKey.getParentClass()).append(".").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
+			builder.append(" inner join `").append(foreignKey.getChildTable()).append("` ").append(foreignKey.getAlias()).append(" on `").append(foreignKey.getParentClass()).append("`.").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
 		}
 		var constraints = QueryConstraints.getConstraints(this.type);
 		if (this.whereClause == null) {
@@ -159,6 +159,7 @@ public class Query<T extends BaseEntity> {
 		} else {
 			this.whereClause = this.whereClause.and(constraints);
 		}
+
 		var whereSQL = Lambda2Sql.toSql(this.whereClause, tableName);
 		builder.append(" where ").append(whereSQL);
 		if (orderByClause != null) {
