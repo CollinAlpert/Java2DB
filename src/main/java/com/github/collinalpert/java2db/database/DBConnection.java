@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.database;
 
+import com.github.collinalpert.java2db.utilities.Utilities;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
@@ -115,6 +116,7 @@ public class DBConnection implements Closeable {
 	 */
 	public ResultSet execute(String query) throws SQLException {
 		Statement statement = connection.createStatement();
+		Utilities.log(query);
 		var set = statement.executeQuery(query);
 		statement.closeOnCompletion();
 		return set;
@@ -133,6 +135,7 @@ public class DBConnection implements Closeable {
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
+		Utilities.log(query);
 		var set = statement.executeQuery();
 		statement.closeOnCompletion();
 		return set;
@@ -146,6 +149,7 @@ public class DBConnection implements Closeable {
 	 */
 	public void update(String query) throws SQLException {
 		var statement = connection.createStatement();
+		Utilities.log(query);
 		statement.executeUpdate(query);
 		statement.closeOnCompletion();
 	}
@@ -162,6 +166,7 @@ public class DBConnection implements Closeable {
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
+		Utilities.log(query);
 		statement.executeUpdate();
 		statement.closeOnCompletion();
 	}

@@ -13,8 +13,9 @@ but easy way without bloating the source code with SQL queries.
 ### How it works
 Java classes (entities) model tables on the database and their fields. 
 Every class has a corresponding service class, which acts as a data 
-service and interacts with the database. The service classes will fill an entity with values from the database. 
-Which values should be fetched, can be defined inside the services. 
+service and interacts with the database. Which values should be fetched, can be defined inside the services. 
+ The service classes will fill an entity with values from the database using a default mapper.
+You can define your own mappings by implementing the ``Mapper`` interface and registering your custom mapper with the ``IoC.registerMapper`` method.
 
 ### Usage/Example
 Lets say we have a database with two tables with the following structure:
@@ -111,6 +112,8 @@ public class Main {
 	}
 }
 ```
+
+This is useful for cases where deleted records in a table are marked by an ``isDeleted`` flag (or something similar) and these records should never return in any query.
 
 ### Getting started
 

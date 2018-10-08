@@ -1,6 +1,7 @@
 package com.github.collinalpert.java2db.utilities;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.mappers.Mapper;
 import com.github.collinalpert.java2db.services.BaseService;
 
 import java.lang.reflect.InvocationTargetException;
@@ -10,15 +11,17 @@ import java.util.Map;
 /**
  * @author Collin Alpert
  * An <pre>Inversion of Control</pre> container.
- * It is responsible for registering and resolving services.
+ * It is responsible for registering and resolving services and custom mappers.
  */
 public class IoC {
 
 	private static Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
+	private static Map<Class<? extends BaseEntity>, Mapper<? extends BaseEntity>> mappers;
 
 
 	static {
 		services = new HashMap<>();
+		mappers = new HashMap<>();
 	}
 
 	/**
@@ -56,6 +59,22 @@ public class IoC {
 	}
 
 	/**
+	 * Resolves a mapper class. This is to preserve the singleton pattern.
+	 * Only one instance of a mapper is needed in the lifecycle of an application.
+	 *
+	 * @param clazz The entity that the mapper was registered for.
+	 * @param <E>   The type of the entity.
+	 * @return The previously registered instance of a service class.
+	 */
+	@SuppressWarnings("unchecked")
+	public static <E extends BaseEntity> Mapper<E> resolveMapper(Class<E> clazz) {
+		if (!mappers.containsKey(clazz)) {
+			throw new IllegalArgumentException(String.format("An instance of a mapper for the entity %s has not been registered yet. Please use the \"registerMapper\" method.", clazz.getSimpleName()));
+		}
+		return (Mapper<E>) mappers.get(clazz);
+	}
+
+	/**
 	 * Resolves a service class by the entity it was registered with.
 	 *
 	 * @param clazz The entity class corresponding to a service class.
@@ -84,13 +103,36 @@ public class IoC {
 	}
 
 	/**
+	 * Registers an instance of a mapper class.
+	 *
+	 * @param clazz  An entity class.
+	 * @param mapper The mapper class for the entity.
+	 * @param <E>    The type of the entity.
+	 * @param <M>    The type of the service class.
+	 */
+	public static <E extends BaseEntity, M extends Mapper<E>> void registerMapper(Class<E> clazz, M mapper) {
+		mappers.put(clazz, mapper);
+	}
+
+	/**
 	 * Checks if a service has already been registered.
 	 *
-	 * @param clazz The class os the service.
-	 * @param <S>   The type of the service.
+	 * @param clazz The class of the entity a service was registered for.
+	 * @param <E>   The type of the service.
 	 * @return {@code True} if an instance of the service is registered, {@code false} if not.
 	 */
-	public <S extends BaseService> boolean isRegistered(Class<S> clazz) {
-		return services.values().stream().anyMatch(x -> x.getClass() == clazz);
+	public static <E extends BaseEntity> boolean isServiceRegistered(Class<E> clazz) {
+		return services.containsKey(clazz);
+	}
+
+	/**
+	 * Checks if a mapper has already been registered.
+	 *
+	 * @param clazz The class of the entity a mapper was registered for.
+	 * @param <E>   The type of the entity.
+	 * @return {@code True} if an instance of the mapper is registered, {@code false} if not.
+	 */
+	public static <E extends BaseEntity> boolean isMapperRegistered(Class<E> clazz) {
+		return mappers.containsKey(clazz);
 	}
 }

@@ -18,7 +18,7 @@ import java.util.Optional;
  *
  * @author Collin Alpert
  */
-public class BaseMapper<T extends BaseEntity> {
+public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 
 	private Class<T> clazz;
 

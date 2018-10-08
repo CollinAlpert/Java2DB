@@ -4,7 +4,7 @@ import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.ForeignKeyReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.BaseMapper;
+import com.github.collinalpert.java2db.mappers.Mapper;
 import com.github.collinalpert.java2db.services.BaseService;
 import com.github.collinalpert.java2db.utilities.Utilities;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
@@ -26,7 +26,7 @@ import java.util.Optional;
 public class Query<T extends BaseEntity> {
 
 	private final Class<T> type;
-	private final BaseMapper<T> mapper;
+	private final Mapper<T> mapper;
 
 	private SqlPredicate<T> whereClause;
 	private OrderClause<T> orderByClause;
@@ -41,7 +41,7 @@ public class Query<T extends BaseEntity> {
 	 * @param type   The entity to query.
 	 * @param mapper The mapper for mapping entities.
 	 */
-	public Query(Class<T> type, BaseMapper<T> mapper) {
+	public Query(Class<T> type, Mapper<T> mapper) {
 		this.type = type;
 		this.mapper = mapper;
 	}
@@ -54,9 +54,7 @@ public class Query<T extends BaseEntity> {
 	 */
 	public Optional<T> getFirst() {
 		try (var connection = new DBConnection()) {
-			var query = buildQuery();
-			Utilities.log(query);
-			return mapper.map(connection.execute(query));
+			return mapper.map(connection.execute(buildQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
@@ -70,9 +68,7 @@ public class Query<T extends BaseEntity> {
 	 */
 	public List<T> get() {
 		try (var connection = new DBConnection()) {
-			var query = buildQuery();
-			Utilities.log(query);
-			return mapper.mapToList(connection.execute(query));
+			return mapper.mapToList(connection.execute(buildQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();

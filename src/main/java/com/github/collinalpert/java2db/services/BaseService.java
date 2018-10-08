@@ -4,6 +4,7 @@ import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
 import com.github.collinalpert.java2db.queries.Query;
+import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.Utilities;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
@@ -26,7 +27,7 @@ public class BaseService<T extends BaseEntity> {
 
 	private final Class<T> type;
 	private final String tableName;
-	private BaseMapper<T> mapper;
+	private BaseMapper<T> baseMapper;
 
 
 	/**
@@ -34,7 +35,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	protected BaseService() {
 		this.type = getGenericType();
-		this.mapper = new BaseMapper<>(type);
+		this.baseMapper = new BaseMapper<>(type);
 		this.tableName = Utilities.getTableName(type);
 	}
 
@@ -57,7 +58,7 @@ public class BaseService<T extends BaseEntity> {
 			try {
 				var value = field.get(instance);
 				if (value == null) {
-					values.add("default");
+					values.add("null");
 					return;
 				}
 				if (value instanceof String) {
@@ -107,7 +108,10 @@ public class BaseService<T extends BaseEntity> {
 	 * @return a {@link Query} object with which a DQL statement can be build, using operations like order by, limit etc.
 	 */
 	private Query<T> query() {
-		return new Query<>(type, mapper);
+		if (IoC.isMapperRegistered(type)) {
+			return new Query<>(type, IoC.resolveMapper(type));
+		}
+		return new Query<>(type, baseMapper);
 	}
 
 	/**
@@ -167,7 +171,7 @@ public class BaseService<T extends BaseEntity> {
 			try {
 				var value = field.get(instance);
 				if (value == null) {
-					fieldSetterList.add(String.format("`%s` = default", field.getName()));
+					fieldSetterList.add(String.format("`%s` = null", field.getName()));
 				}
 				if (value instanceof String) {
 					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), value));
