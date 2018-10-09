@@ -147,7 +147,7 @@ public class Query<T extends BaseEntity> {
 		}
 		builder.append(String.join(", ", fieldList)).append(" from ").append(tableName);
 		for (var foreignKey : foreignKeyList) {
-			builder.append(" inner join `").append(foreignKey.getChildTable()).append("` ").append(foreignKey.getAlias()).append(" on `").append(foreignKey.getParentClass()).append("`.").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
+			builder.append(" left join `").append(foreignKey.getChildTable()).append("` ").append(foreignKey.getAlias()).append(" on `").append(foreignKey.getParentClass()).append("`.").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
 		}
 		var constraints = QueryConstraints.getConstraints(this.type);
 		if (this.whereClause == null) {

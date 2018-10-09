@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,6 +89,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	private <E extends BaseEntity> void setFields(ResultSet set, E entity, String identifier) throws SQLException {
 		var fields = Utilities.getEntityFields(entity.getClass(), true);
 		var tableName = Utilities.getTableName(entity.getClass());
+		var foreignKeyFields = new LinkedList<Field>();
 		for (Field field : fields) {
 			field.setAccessible(true);
 			try {
@@ -95,16 +97,38 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 					if (!BaseEntity.class.isAssignableFrom(field.getType())) {
 						throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
 					}
+					foreignKeyFields.add(field);
 					var foreignKeyObject = IoC.resolve((Class<? extends BaseEntity>) field.getType());
 					setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
 					field.set(entity, foreignKeyObject);
 					continue;
 				}
-				var value = set.getObject((identifier == null ? tableName : identifier) + "_" + field.getName(), field.getType());
+				var value = set.getObject((identifier == null ? tableName : identifier) + "_" + field.getName());
+				if (value == null) {
+					continue;
+				}
 				field.set(entity, value);
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
 			}
 		}
+		validateEntityForNull(entity, foreignKeyFields);
+	}
+
+	private <E extends BaseEntity> void validateEntityForNull(E entity, List<Field> foreignKeyFields) {
+		foreignKeyFields.forEach(field -> {
+			var foreignKeyText = field.getAnnotation(ForeignKeyObject.class).value();
+			try {
+				field.setAccessible(true);
+				var foreignKeyField = entity.getClass().getDeclaredField(foreignKeyText);
+				foreignKeyField.setAccessible(true);
+				var value = foreignKeyField.get(entity);
+				if (value == null) {
+					field.set(entity, null);
+				}
+			} catch (NoSuchFieldException | IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		});
 	}
 }

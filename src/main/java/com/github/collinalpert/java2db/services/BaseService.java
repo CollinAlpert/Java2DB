@@ -3,9 +3,11 @@ package com.github.collinalpert.java2db.services;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
+import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.Utilities;
+import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
 import java.lang.reflect.ParameterizedType;
@@ -151,6 +153,60 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public List<T> getAll() {
 		return getMultiple(x -> true).get();
+	}
+
+	/**
+	 * Gets all values from the table but limits the result.
+	 *
+	 * @param limit The maximum of records to return.
+	 * @return A list with the maximum size of the parameter specified.
+	 */
+	public List<T> getAll(int limit) {
+		return getMultiple(x -> true).limit(limit).get();
+	}
+
+	/**
+	 * Gets all values from the table and orders them in an ascending order.
+	 *
+	 * @param orderBy The property to order by.
+	 * @return A list of all records ordered by a specific property in an ascending order.
+	 */
+	public List<T> getAll(SqlFunction<T, ?> orderBy) {
+		return getAll(orderBy, OrderTypes.ASCENDING);
+	}
+
+	/**
+	 * Gets all values from the table and orders them in the specified order.
+	 *
+	 * @param orderBy     The property to order by.
+	 * @param sortingType The order direction. Can be either ascending or descending.
+	 * @return A list of all records ordered by a specific property in the specified order.
+	 */
+	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType) {
+		return getMultiple(x -> true).orderBy(orderBy, sortingType).get();
+	}
+
+	/**
+	 * Gets all values from the table, orders them in an ascending order and limits the result.
+	 *
+	 * @param orderBy The property to order by.
+	 * @param limit   The maximum records to return.
+	 * @return A list with the maximum size of the parameter specified and in an ascending order.
+	 */
+	public List<T> getAll(SqlFunction<T, ?> orderBy, int limit) {
+		return getAll(orderBy, OrderTypes.ASCENDING, limit);
+	}
+
+	/**
+	 * Gets all values from the table, orders them in a specific order and limits the result.
+	 *
+	 * @param orderBy     The property to order by.
+	 * @param sortingType The order direction. Can be either ascending or descending.
+	 * @param limit       The maximum records to return.
+	 * @return A list with the maximum size of the parameter specified and in an ascending order.
+	 */
+	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType, int limit) {
+		return getMultiple(x -> true).orderBy(orderBy, sortingType).limit(limit).get();
 	}
 	//endregion
 
