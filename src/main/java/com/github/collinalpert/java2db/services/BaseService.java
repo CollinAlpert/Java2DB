@@ -115,7 +115,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public boolean exists(SqlFunction<T, ?> column, Object columnValue) {
 		try (var connection = new DBConnection()) {
-			var result = connection.execute(String.format("select count(id) from `%s` where %s = ?", tableName, Lambda2Sql.toSql(column, tableName)), columnValue);
+			var result = connection.execute(String.format("select count(id) from `%s` where %s = %s", tableName, Lambda2Sql.toSql(column, tableName), columnValue));
 			if (result.next()) {
 				return result.getInt("count(id)") > 0;
 			}
