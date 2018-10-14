@@ -92,9 +92,11 @@ That's it! Now we can access the database using the services with simple predefi
 Custom methods can be defined in the respective service using the 
 ``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class. 
 When using ``getMultiple`` method, you can use some more query options, like ``where``, ``orderBy`` and ``limit`` 
-in the returned ``Query`` object.
+in the returned ``Query`` object.\
+If you would like to check if a certain record exists in a table, you can use the ``exists`` method provided by the ``BaseService`` class.
+Using the above example, the usage would look something like this: ``personService.exists(Person::getName, "Steve")``
 
-All these methods can only be used by methods in the respective service classes.
+All these methods, except for the ``exists`` method, can only be used by methods in the respective service classes.
 This is because every service should have descriptive methods for any data they get.
 
 The current version also offers full support for default query constraints. 
@@ -122,7 +124,7 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.2.5</version>
+    <version>2.2.6</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start:
@@ -130,4 +132,5 @@ Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in
 2. Register an instance of all of your services. Use the ``IoC.registerService`` method to do this. Using the above example, it would look something like this: ``IoC.registerService(Person.class, new PersonService());``.
 
 As the services should follow the singleton pattern, you should retrieve an instance of a service using the ``IoC.resolveService`` method.\
-If you would not like your queries logged in the console, use the ``DBConnection.LOG_QUERIES = false;`` statement.  
+If you would not like your queries logged in the console, use the ``DBConnection.LOG_QUERIES = false;`` statement.\
+In case Java2DB can't establish a connection with your database, it will throw a ``ConnectionFailedException``. You can catch it and perform your own handling.

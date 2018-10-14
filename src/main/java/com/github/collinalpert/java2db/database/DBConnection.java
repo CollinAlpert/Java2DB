@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.database;
 
+import com.github.collinalpert.java2db.exceptions.ConnectionFailedException;
 import com.github.collinalpert.java2db.utilities.Utilities;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
@@ -88,9 +89,8 @@ public class DBConnection implements Closeable {
 			connection = DriverManager.getConnection(connectionString, USERNAME, PASSWORD);
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {
-			System.err.println("The connection to the database failed. Please check if the MySQL server is reachable and if you have an internet connection.");
 			isConnectionValid = false;
-			System.exit(1);
+			throw new ConnectionFailedException();
 		} catch (ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 			isConnectionValid = false;

@@ -7,6 +7,7 @@ import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.Utilities;
+import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
@@ -96,7 +97,6 @@ public class BaseService<T extends BaseEntity> {
 		});
 		values.add("default");
 		insertQuery.append(" (").append(String.join(", ", values)).append(")");
-		Utilities.log(insertQuery.toString());
 		try (var connection = new DBConnection()) {
 			connection.update(insertQuery.toString());
 			Utilities.logf("%s successfully created!", type.getSimpleName());
@@ -105,6 +105,47 @@ public class BaseService<T extends BaseEntity> {
 	//endregion
 
 	//region Read
+
+	/**
+	 * Checks if a value exists in a record of a table.
+	 *
+	 * @param column      The column to check for the value in.
+	 * @param columnValue The value of the records column to check.
+	 * @return {@code true} if the value exists in a record, {@code false} if not.
+	 */
+	public boolean exists(SqlFunction<T, ?> column, Object columnValue) {
+		try (var connection = new DBConnection()) {
+			var result = connection.execute(String.format("select count(id) from `%s` where %s = ?", tableName, Lambda2Sql.toSql(column, tableName)), columnValue);
+			if (result.next()) {
+				return result.getInt("count(id)") > 0;
+			}
+			return false;
+		} catch (SQLException e) {
+			throw new IllegalArgumentException(String.format("Could not check if %s exists.", columnValue));
+		}
+	}
+
+	public boolean exists(SqlFunction<T, String> column, String columnValue) {
+		return exists(column, (Object) String.format("'%s'", columnValue));
+	}
+
+	public boolean exists(SqlFunction<T, Boolean> column, boolean columnValue) {
+		return exists(column, columnValue ? 1 : 0);
+	}
+
+	public boolean exists(SqlFunction<T, LocalDateTime> column, LocalDateTime columnValue) {
+		return exists(column, String.format("'%d-%d-%d %d:%d:%d'", columnValue.getYear(), columnValue.getMonthValue(),
+				columnValue.getDayOfMonth(), columnValue.getHour(), columnValue.getMinute(), columnValue.getSecond()));
+	}
+
+	public boolean exists(SqlFunction<T, LocalDate> column, LocalDate columnValue) {
+		return exists(column, String.format("'%d-%d-%d'", columnValue.getYear(), columnValue.getMonthValue(),
+				columnValue.getDayOfMonth()));
+	}
+
+	public boolean exists(SqlFunction<T, LocalTime> column, LocalTime columnValue) {
+		return exists(column, String.format("'%d:%d:%d'", columnValue.getHour(), columnValue.getMinute(), columnValue.getSecond()));
+	}
 
 	/**
 	 * @return a {@link Query} object with which a DQL statement can be build, using operations like order by, limit etc.
@@ -262,7 +303,6 @@ public class BaseService<T extends BaseEntity> {
 		});
 		updateQuery.append(String.join(", ", fieldSetterList))
 				.append(" where id = ").append(instance.getId());
-		Utilities.log(updateQuery.toString());
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery.toString());
 			Utilities.logf("%s with id %d was successfully updated", type.getSimpleName(), instance.getId());
