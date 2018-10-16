@@ -1,7 +1,7 @@
 module com.github.collinalpert.java2db {
 	requires java.sql;
 	requires mysql.connector.java;
-	requires com.github.collinalpert.lambda2sql;
+	requires transitive com.github.collinalpert.lambda2sql;
 
 	exports com.github.collinalpert.java2db.annotations;
 	exports com.github.collinalpert.java2db.database;

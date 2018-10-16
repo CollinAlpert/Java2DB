@@ -11,6 +11,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Collin Alpert
@@ -41,8 +42,9 @@ public class Utilities {
 	private static <T extends BaseEntity> List<Field> getEntityFields(Class<? super T> instanceClass, Class<?> delimiter, boolean includeForeignKeys) {
 		var fields = new LinkedList<Field>();
 		do {
-			fields.addAll(Arrays.asList(instanceClass.getDeclaredFields()));
-			fields.removeIf(field -> field.getAnnotation(Ignore.class) != null || !includeForeignKeys && field.getAnnotation(ForeignKeyObject.class) != null);
+			fields.addAll(Arrays.stream(instanceClass.getDeclaredFields())
+					.filter(field -> field.getAnnotation(Ignore.class) != null || !includeForeignKeys && field.getAnnotation(ForeignKeyObject.class) != null)
+					.collect(Collectors.toList()));
 			instanceClass = instanceClass.getSuperclass();
 		} while (instanceClass != delimiter);
 		return fields;

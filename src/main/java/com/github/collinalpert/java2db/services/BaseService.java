@@ -316,8 +316,9 @@ public class BaseService<T extends BaseEntity> {
 	 * Deletes the corresponding row on the database.
 	 *
 	 * @param instance The instance to delete on the database.
+	 * @throws SQLException for example because of a foreign key constraint.
 	 */
-	public void delete(T instance) {
+	public void delete(T instance) throws SQLException {
 		delete(instance.getId());
 	}
 
@@ -325,13 +326,12 @@ public class BaseService<T extends BaseEntity> {
 	 * Deletes a row by an id.
 	 *
 	 * @param id The row with this id to delete.
+	 * @throws SQLException for example because of a foreign key constraint.
 	 */
-	public void delete(long id) {
+	public void delete(long id) throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from `%s` where id=?", tableName), id);
+			connection.update(String.format("delete from `%s` where id = ?", tableName), id);
 			Utilities.logf("%s with id %d successfully deleted!", type.getSimpleName(), id);
-		} catch (SQLException e) {
-			e.printStackTrace();
 		}
 	}
 	//endregion
