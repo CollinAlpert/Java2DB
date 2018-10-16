@@ -39,7 +39,7 @@ public class BaseService<T extends BaseEntity> {
 	protected BaseService() {
 		this.type = getGenericType();
 		this.baseMapper = new BaseMapper<>(type);
-		this.tableName = Utilities.getTableName(type);
+		this.tableName = String.format("`%s`", Utilities.getTableName(type));
 	}
 
 	//region Create
@@ -52,7 +52,7 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void create(T instance) throws SQLException {
-		var insertQuery = new StringBuilder("insert into `").append(tableName).append("` (");
+		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
 		var databaseFields = Utilities.getEntityFields(instance.getClass()).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
 		insertQuery.append(databaseFields).append(") values");
 		List<String> values = new ArrayList<>();
@@ -104,7 +104,7 @@ public class BaseService<T extends BaseEntity> {
 	}
 	//endregion
 
-	//region Read
+	//region Exists
 
 	/**
 	 * Checks if a value exists in a record of a table.
@@ -115,12 +115,13 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public boolean exists(SqlFunction<T, ?> column, Object columnValue) {
 		try (var connection = new DBConnection()) {
-			var result = connection.execute(String.format("select count(id) from `%s` where %s = %s", tableName, Lambda2Sql.toSql(column, tableName), columnValue));
+			var result = connection.execute(String.format("select count(id) from %s where %s = %s", tableName, Lambda2Sql.toSql(column, tableName), columnValue));
 			if (result.next()) {
 				return result.getInt("count(id)") > 0;
 			}
 			return false;
 		} catch (SQLException e) {
+			e.printStackTrace();
 			throw new IllegalArgumentException(String.format("Could not check if %s exists.", columnValue));
 		}
 	}
@@ -146,6 +147,10 @@ public class BaseService<T extends BaseEntity> {
 	public boolean exists(SqlFunction<T, LocalTime> column, LocalTime columnValue) {
 		return exists(column, String.format("'%d:%d:%d'", columnValue.getHour(), columnValue.getMinute(), columnValue.getSecond()));
 	}
+
+	//endregion
+
+	//region Read
 
 	/**
 	 * @return a {@link Query} object with which a DQL statement can be build, using operations like order by, limit etc.
@@ -261,7 +266,7 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(T instance) throws SQLException {
-		var updateQuery = new StringBuilder("update `").append(tableName).append("` set ");
+		var updateQuery = new StringBuilder("update ").append(tableName).append(" set ");
 		ArrayList<String> fieldSetterList = new ArrayList<>();
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
@@ -330,7 +335,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void delete(long id) throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from `%s` where id = ?", tableName), id);
+			connection.update(String.format("delete from %s where id = ?", tableName), id);
 			Utilities.logf("%s with id %d successfully deleted!", type.getSimpleName(), id);
 		}
 	}

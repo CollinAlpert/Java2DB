@@ -43,7 +43,7 @@ public class Utilities {
 		var fields = new LinkedList<Field>();
 		do {
 			fields.addAll(Arrays.stream(instanceClass.getDeclaredFields())
-					.filter(field -> field.getAnnotation(Ignore.class) != null || !includeForeignKeys && field.getAnnotation(ForeignKeyObject.class) != null)
+					.filter(field -> field.getAnnotation(Ignore.class) == null && (includeForeignKeys || field.getAnnotation(ForeignKeyObject.class) == null))
 					.collect(Collectors.toList()));
 			instanceClass = instanceClass.getSuperclass();
 		} while (instanceClass != delimiter);
