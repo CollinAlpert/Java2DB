@@ -5,6 +5,8 @@ While this library may not offer the most fancy features or allow
 you to fire huge queries to your database, that is not what it is intended for. 
 It is lightweight and meant for a quick and simple access to your database.
 
+P.S.: Feature requests are always welcome. Just open an issue.
+
 **Please note:** This is a Java 10 library. Make sure you have Java 10 installed when using this library. 
 This library is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.
 It is meant for smaller projects which want to interact with their database in a simple, 
@@ -93,10 +95,13 @@ Custom methods can be defined in the respective service using the
 ``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class. 
 When using ``getMultiple`` method, you can use some more query options, like ``where``, ``orderBy`` and ``limit`` 
 in the returned ``Query`` object.\
-If you would like to check if a certain record exists in a table, you can use the ``exists`` method provided by the ``BaseService`` class.
-Using the above example, the usage would look something like this: ``personService.exists(Person::getName, "Steve")``
+For counting functionality, the ``BaseService`` provides a ``count`` method. 
+You can use it to either count all rows in a table, or to count all rows which match a certain condition.\
+If you would like to check if a certain record exists in a table, you can use the ``any`` method provided by the ``BaseService``.
+Using the above example, the usages would look something like this: ``personService.any(person -> person.getName() == "Steve")`` or ``personService.count(person -> person.getName() == "Steve")``.
+You can also check if a table has at least one row when using the ``any`` method without any parameters.
 
-All these methods, except for the ``exists`` method, can only be used by methods in the respective service classes.
+The querying methods can only be used by methods in the respective service classes.
 This is because every service should have descriptive methods for any data they get.
 
 The current version also offers full support for default query constraints. 
@@ -124,7 +129,7 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.3.2</version>
+    <version>2.3.3</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start:

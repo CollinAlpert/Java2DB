@@ -9,9 +9,14 @@ import com.github.collinalpert.java2db.utilities.Utilities;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -36,15 +41,14 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 */
 	public Optional<T> map(ResultSet set) throws SQLException {
 		T entity = IoC.resolve(clazz);
-		try (set) {
-			if (!set.next()) {
-				UniqueIdentifier.unset();
-				return Optional.empty();
-			}
-			setFields(set, entity);
+		if (!set.next()) {
 			UniqueIdentifier.unset();
-			return Optional.of(entity);
+			return Optional.empty();
 		}
+		setFields(set, entity);
+		set.close();
+		UniqueIdentifier.unset();
+		return Optional.of(entity);
 	}
 
 	/**
@@ -56,13 +60,12 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 */
 	public List<T> mapToList(ResultSet set) throws SQLException {
 		var list = new ArrayList<T>();
-		try (set) {
-			while (set.next()) {
-				var entity = IoC.resolve(clazz);
-				setFields(set, entity);
-				list.add(entity);
-			}
+		while (set.next()) {
+			var entity = IoC.resolve(clazz);
+			setFields(set, entity);
+			list.add(entity);
 		}
+		set.close();
 		UniqueIdentifier.unset();
 		return list;
 	}
@@ -103,10 +106,23 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 					field.set(entity, foreignKeyObject);
 					continue;
 				}
-				var value = set.getObject((identifier == null ? tableName : identifier) + "_" + field.getName());
+
+				var columnLabel = (identifier == null ? tableName : identifier) + "_" + field.getName();
+				Object value;
+				if (field.getType() == LocalDateTime.class) {
+					value = set.getTimestamp(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDateTime();
+				} else if (field.getType() == LocalDate.class) {
+					value = set.getDate(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDate();
+				} else if (field.getType() == LocalTime.class) {
+					value = set.getTime(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalTime();
+				} else {
+					value = set.getObject(columnLabel);
+				}
+
 				if (value == null) {
 					continue;
 				}
+
 				field.set(entity, value);
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();

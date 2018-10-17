@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +31,11 @@ public class BaseService<T extends BaseEntity> {
 
 	private final Class<T> type;
 	private final String tableName;
-	private BaseMapper<T> baseMapper;
+	private final BaseMapper<T> baseMapper;
+
+	private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("'yyyy-MM-dd HH:mm:ss'");
+	private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("'yyyy-MM-dd'");
+	private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("'HH:mm:ss'");
 
 
 	/**
@@ -75,19 +80,17 @@ public class BaseService<T extends BaseEntity> {
 				}
 				if (value instanceof LocalDateTime) {
 					var dateTime = (LocalDateTime) value;
-					values.add(String.format("'%d-%d-%d %d:%d:%d'", dateTime.getYear(), dateTime.getMonthValue(),
-							dateTime.getDayOfMonth(), dateTime.getHour(), dateTime.getMinute(), dateTime.getSecond()));
+					values.add(dateTimeFormatter.format(dateTime));
 					return;
 				}
 				if (value instanceof LocalDate) {
 					var date = (LocalDate) value;
-					values.add(String.format("'%d-%d-%d'", date.getYear(), date.getMonthValue(),
-							date.getDayOfMonth()));
+					values.add(dateFormatter.format(date));
 					return;
 				}
 				if (value instanceof LocalTime) {
 					var time = (LocalTime) value;
-					values.add(String.format("'%d:%d:%d'", time.getHour(), time.getMinute(), time.getSecond()));
+					values.add(timeFormatter.format(time));
 					return;
 				}
 				values.add(value.toString());
@@ -104,48 +107,68 @@ public class BaseService<T extends BaseEntity> {
 	}
 	//endregion
 
-	//region Exists
+	//region Count
 
 	/**
-	 * Checks if a value exists in a record of a table.
+	 * An overload of the {@link #count(SqlPredicate)} method. It will count all the rows in a table.
 	 *
-	 * @param column      The column to check for the value in.
-	 * @param columnValue The value of the records column to check.
-	 * @return {@code true} if the value exists in a record, {@code false} if not.
+	 * @return The amount of rows in this table.
 	 */
-	public boolean exists(SqlFunction<T, ?> column, Object columnValue) {
+	public long count() {
+		return count(x -> true);
+	}
+
+	/**
+	 * Counts the rows matching a certain condition.
+	 *
+	 * @param predicate The condition to test for.
+	 * @return The number of rows matching the condition.
+	 */
+	public long count(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
-			var result = connection.execute(String.format("select count(id) from %s where %s = %s", tableName, Lambda2Sql.toSql(column, tableName), columnValue));
-			if (result.next()) {
-				return result.getInt("count(id)") > 0;
+			try (var result = connection.execute(String.format("select count(*) from %s where %s", tableName, Lambda2Sql.toSql(predicate, tableName)))) {
+				if (result.next()) {
+					return result.getLong("count(*)");
+				}
+				return 0;
 			}
-			return false;
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new IllegalArgumentException(String.format("Could not check if %s exists.", columnValue));
+			throw new IllegalArgumentException("Could not get amount of rows for this predicate.");
 		}
 	}
 
-	public boolean exists(SqlFunction<T, String> column, String columnValue) {
-		return exists(column, (Object) String.format("'%s'", columnValue));
+	//endregion
+
+	//region Any
+
+	/**
+	 * Checks if a table has at least one row.
+	 *
+	 * @return {@code true} if at least one row exists in the table, {@code false} if not.
+	 */
+	public boolean any() {
+		try (var connection = new DBConnection()) {
+			try (var result = connection.execute(String.format("select count(*) from (select 1 from %s limit 1) as x", this.tableName))) {
+				if (result.next()) {
+					return result.getLong("count(*)") == 1;
+				}
+				return false;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new IllegalArgumentException("Could not check if this table has any rows.");
+		}
 	}
 
-	public boolean exists(SqlFunction<T, Boolean> column, boolean columnValue) {
-		return exists(column, columnValue ? 1 : 0);
-	}
-
-	public boolean exists(SqlFunction<T, LocalDateTime> column, LocalDateTime columnValue) {
-		return exists(column, String.format("'%d-%d-%d %d:%d:%d'", columnValue.getYear(), columnValue.getMonthValue(),
-				columnValue.getDayOfMonth(), columnValue.getHour(), columnValue.getMinute(), columnValue.getSecond()));
-	}
-
-	public boolean exists(SqlFunction<T, LocalDate> column, LocalDate columnValue) {
-		return exists(column, String.format("'%d-%d-%d'", columnValue.getYear(), columnValue.getMonthValue(),
-				columnValue.getDayOfMonth()));
-	}
-
-	public boolean exists(SqlFunction<T, LocalTime> column, LocalTime columnValue) {
-		return exists(column, String.format("'%d:%d:%d'", columnValue.getHour(), columnValue.getMinute(), columnValue.getSecond()));
+	/**
+	 * Checks if a value matching the condition exists in the table.
+	 *
+	 * @param predicate The condition to check for.
+	 * @return {@code true} if the predicate matches one or more records, {@code false} if not.
+	 */
+	public boolean any(SqlPredicate<T> predicate) {
+		return count(predicate) > 0;
 	}
 
 	//endregion
@@ -286,19 +309,17 @@ public class BaseService<T extends BaseEntity> {
 				}
 				if (value instanceof LocalDateTime) {
 					var dateTime = (LocalDateTime) value;
-					fieldSetterList.add(String.format("`%s` = '%d-%d-%d %d:%d:%d'", field.getName(), dateTime.getYear(), dateTime.getMonthValue(),
-							dateTime.getDayOfMonth(), dateTime.getHour(), dateTime.getMinute(), dateTime.getSecond()));
+					fieldSetterList.add(String.format("`%s` = %s", field.getName(), dateTimeFormatter.format(dateTime)));
 					return;
 				}
 				if (value instanceof LocalDate) {
 					var date = (LocalDate) value;
-					fieldSetterList.add(String.format("`%s` = '%d-%d-%d'", field.getName(), date.getYear(), date.getMonthValue(),
-							date.getDayOfMonth()));
+					fieldSetterList.add(String.format("`%s` = %s", field.getName(), dateFormatter.format(date)));
 					return;
 				}
 				if (value instanceof LocalTime) {
 					var time = (LocalTime) value;
-					fieldSetterList.add(String.format("`%s` = '%d:%d:%d'", field.getName(), time.getHour(), time.getMinute(), time.getSecond()));
+					fieldSetterList.add(String.format("`%s` = %s", field.getName(), timeFormatter.format(time)));
 					return;
 				}
 				fieldSetterList.add(String.format("`%s` = %s", field.getName(), value));
@@ -324,7 +345,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(T instance) throws SQLException {
-		delete(instance.getId());
+		delete(x -> x.getId() == instance.getId());
 	}
 
 	/**
@@ -334,9 +355,19 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(long id) throws SQLException {
+		delete(x -> x.getId() == id);
+	}
+
+	/**
+	 * Deletes rows based on a condition.
+	 *
+	 * @param predicate The condition to delete by.
+	 * @throws SQLException in case the condition cannot be applied or if a foreign key constraint fails.
+	 */
+	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from %s where id = ?", tableName), id);
-			Utilities.logf("%s with id %d successfully deleted!", type.getSimpleName(), id);
+			connection.update(String.format("delete from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
+			Utilities.logf("%s successfully deleted!", type.getSimpleName());
 		}
 	}
 	//endregion
