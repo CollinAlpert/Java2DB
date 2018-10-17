@@ -33,9 +33,9 @@ public class BaseService<T extends BaseEntity> {
 	private final String tableName;
 	private final BaseMapper<T> baseMapper;
 
-	private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("'yyyy-MM-dd HH:mm:ss'");
-	private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("'yyyy-MM-dd'");
-	private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("'HH:mm:ss'");
+	private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+	private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
 
 	/**
@@ -80,17 +80,17 @@ public class BaseService<T extends BaseEntity> {
 				}
 				if (value instanceof LocalDateTime) {
 					var dateTime = (LocalDateTime) value;
-					values.add(dateTimeFormatter.format(dateTime));
+					values.add(String.format("'%s'", dateTimeFormatter.format(dateTime)));
 					return;
 				}
 				if (value instanceof LocalDate) {
 					var date = (LocalDate) value;
-					values.add(dateFormatter.format(date));
+					values.add(String.format("'%s'", dateFormatter.format(date)));
 					return;
 				}
 				if (value instanceof LocalTime) {
 					var time = (LocalTime) value;
-					values.add(timeFormatter.format(time));
+					values.add(String.format("'%s'", timeFormatter.format(time)));
 					return;
 				}
 				values.add(value.toString());
@@ -309,17 +309,17 @@ public class BaseService<T extends BaseEntity> {
 				}
 				if (value instanceof LocalDateTime) {
 					var dateTime = (LocalDateTime) value;
-					fieldSetterList.add(String.format("`%s` = %s", field.getName(), dateTimeFormatter.format(dateTime)));
+					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), dateTimeFormatter.format(dateTime)));
 					return;
 				}
 				if (value instanceof LocalDate) {
 					var date = (LocalDate) value;
-					fieldSetterList.add(String.format("`%s` = %s", field.getName(), dateFormatter.format(date)));
+					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), dateFormatter.format(date)));
 					return;
 				}
 				if (value instanceof LocalTime) {
 					var time = (LocalTime) value;
-					fieldSetterList.add(String.format("`%s` = %s", field.getName(), timeFormatter.format(time)));
+					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), timeFormatter.format(time)));
 					return;
 				}
 				fieldSetterList.add(String.format("`%s` = %s", field.getName(), value));
@@ -345,7 +345,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(T instance) throws SQLException {
-		delete(x -> x.getId() == instance.getId());
+		delete(instance.getId());
 	}
 
 	/**
@@ -355,7 +355,10 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(long id) throws SQLException {
-		delete(x -> x.getId() == id);
+		try (var connection = new DBConnection()) {
+			connection.update(String.format("delete from %s where %s.id = ?", this.tableName, this.tableName), id);
+			Utilities.logf("%s with id %s successfully deleted!", type.getSimpleName(), id);
+		}
 	}
 
 	/**
