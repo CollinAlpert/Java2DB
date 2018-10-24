@@ -42,7 +42,7 @@ public class DBConnection implements Closeable {
 	 * Specifies the type of the database. Currently MySQL and Microsoft SQL are supported.
 	 * This property is optional. Default is MySQL.
 	 */
-	public static DatabaseTypes DATABASE_TYPE;
+	public static DatabaseTypes DATABASE_TYPE = DatabaseTypes.MYSQL;
 
 	/**
 	 * Specifies the port to connect to the database on.
