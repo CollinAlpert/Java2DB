@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.utilities;
 
-import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
+import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.annotations.Ignore;
 import com.github.collinalpert.java2db.annotations.TableName;
 import com.github.collinalpert.java2db.database.DBConnection;
@@ -43,7 +43,7 @@ public class Utilities {
 		var fields = new LinkedList<Field>();
 		do {
 			fields.addAll(Arrays.stream(instanceClass.getDeclaredFields())
-					.filter(field -> field.getAnnotation(Ignore.class) == null && (includeForeignKeys || field.getAnnotation(ForeignKeyObject.class) == null))
+					.filter(field -> field.getAnnotation(Ignore.class) == null && (includeForeignKeys || field.getAnnotation(ForeignKeyEntity.class) == null))
 					.collect(Collectors.toList()));
 			instanceClass = instanceClass.getSuperclass();
 		} while (instanceClass != delimiter);
@@ -70,7 +70,7 @@ public class Utilities {
 	public static List<TableNameColumnReference> getAllFields(Class<? extends BaseEntity> instanceClass, String alias) {
 		var fields = new LinkedList<TableNameColumnReference>();
 		for (Field field : getEntityFields(instanceClass, true)) {
-			if (field.getAnnotation(ForeignKeyObject.class) != null) {
+			if (field.getAnnotation(ForeignKeyEntity.class) != null) {
 				var tempAlias = UniqueIdentifier.generate(getTableName(field.getType()).substring(0, 1), field.getName());
 				fields.add(new TableNameColumnReference(getTableName(instanceClass), field, tempAlias, alias));
 				fields.addAll(getAllFields((Class<? extends BaseEntity>) field.getType(), tempAlias));

@@ -62,7 +62,7 @@ public class Person extends BaseEntity {
 	
 	// That way Java2DB will know that this field does not exist on the database.
 	// It will be filled accordingly.
-	@ForeignKeyObject("genderId")
+	@ForeignKeyEntity("genderId")
 	private Gender gender;
 	
 	// Getters and setters...
@@ -129,7 +129,7 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.3.4</version>
+    <version>2.4</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start:

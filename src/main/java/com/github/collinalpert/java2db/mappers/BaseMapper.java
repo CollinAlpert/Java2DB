@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.mappers;
 
-import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
+import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.UniqueIdentifier;
@@ -37,7 +37,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 *
 	 * @param set The {@link ResultSet} to map.
 	 * @return An Optional which contains the Java entity if the query was successful.
-	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected.
+	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
 	public Optional<T> map(ResultSet set) throws SQLException {
 		T entity = IoC.resolve(clazz);
@@ -56,7 +56,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 *
 	 * @param set The {@link ResultSet} to map.
 	 * @return A list of Java entities.
-	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected.
+	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
 	public List<T> mapToList(ResultSet set) throws SQLException {
 		var list = new ArrayList<T>();
@@ -72,7 +72,6 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 
 	/**
 	 * Fills the corresponding fields in an entity based on a {@link ResultSet}.
-	 * If a field is marked as a foreign key object, a new query is started to fill this entity with a value.
 	 *
 	 * @param set    The {@link ResultSet} to get the data from.
 	 * @param entity The Java entity to fill.
@@ -83,7 +82,6 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 
 	/**
 	 * Fills the corresponding fields in an entity based on a {@link ResultSet}.
-	 * If a field is marked as a foreign key object, a new query is started to fill this entity with a value.
 	 *
 	 * @param set        The {@link ResultSet} to get the data from.
 	 * @param identifier The alias set for a certain entity used as a nested property.
@@ -96,7 +94,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 		for (Field field : fields) {
 			field.setAccessible(true);
 			try {
-				if (field.getAnnotation(ForeignKeyObject.class) != null) {
+				if (field.getAnnotation(ForeignKeyEntity.class) != null) {
 					if (!BaseEntity.class.isAssignableFrom(field.getType())) {
 						throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
 					}
@@ -131,9 +129,16 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 		validateEntityForNull(entity, foreignKeyFields);
 	}
 
+	/**
+	 * Sets all foreign key entities to {@code null} where the foreign key is also null, since this cannot be prevented while filling the entity.
+	 *
+	 * @param entity           The entity to be validated.
+	 * @param foreignKeyFields The existing foreign key fields in this entity to be checked.
+	 * @param <E>              The type of the entity.
+	 */
 	private <E extends BaseEntity> void validateEntityForNull(E entity, List<Field> foreignKeyFields) {
 		foreignKeyFields.forEach(field -> {
-			var foreignKeyText = field.getAnnotation(ForeignKeyObject.class).value();
+			var foreignKeyText = field.getAnnotation(ForeignKeyEntity.class).value();
 			try {
 				field.setAccessible(true);
 				var foreignKeyField = entity.getClass().getDeclaredField(foreignKeyText);

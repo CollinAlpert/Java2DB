@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.queries;
 
-import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
+import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.ForeignKeyReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
@@ -19,7 +19,7 @@ import java.util.Optional;
 
 /**
  * A class representing a DQL statement with different options, including where clauses, order by clauses and limits.
- * It also automatically joins foreign keys so the corresponding entities can be filled.
+ * It also automatically joins foreign keys so the corresponding entities (marked with the {@link ForeignKeyEntity} attribute) can be filled.
  *
  * @author Collin Alpert
  */
@@ -29,14 +29,15 @@ public class Query<T extends BaseEntity> {
 	private final Mapper<T> mapper;
 
 	private SqlPredicate<T> whereClause;
-	private OrderClause<T> orderByClause;
+	private SqlFunction<T, ?> orderBy;
+	private OrderTypes orderType;
 	private Integer limit;
 
 
 	/**
 	 * Constructor for creating a DQL statement for a given entity.
 	 * This constructor should not be used directly, but through the
-	 * {@link BaseService#query()} method which every service can use due to inheritance.
+	 * {@link BaseService#createQuery()} method which every service can use due to inheritance.
 	 *
 	 * @param type   The entity to query.
 	 * @param mapper The mapper for mapping entities.
@@ -76,17 +77,24 @@ public class Query<T extends BaseEntity> {
 	}
 
 	/**
-	 * Sets a WHERE clause for the DQL statement.
+	 * Sets or appends a WHERE clause for the DQL statement.
 	 *
 	 * @param predicate The predicate describing the WHERE clause.
-	 * @return This {@link Query} object, now with a WHERE clause.
+	 * @return This {@link Query} object, now with an (appended) WHERE clause.
 	 */
 	public Query<T> where(SqlPredicate<T> predicate) {
-		if (this.whereClause != null) {
-			this.whereClause = this.whereClause.and(predicate);
-			return this;
-		}
-		this.whereClause = predicate;
+		this.whereClause = this.whereClause == null ? predicate : this.whereClause.and(predicate);
+		return this;
+	}
+
+	/**
+	 * Sets or appends an OR WHERE clause to the DQL statement.
+	 *
+	 * @param predicate The predicate describing the OR WHERE clause.
+	 * @return This {@link Query} object, now with an (appended) OR WHERE clause.
+	 */
+	public Query<T> orWhere(SqlPredicate<T> predicate) {
+		this.whereClause = this.whereClause == null ? predicate : this.whereClause.or(predicate);
 		return this;
 	}
 
@@ -108,7 +116,8 @@ public class Query<T extends BaseEntity> {
 	 * @return This {@link Query} object, now with an ORDER BY clause.
 	 */
 	public Query<T> orderBy(SqlFunction<T, ?> function, OrderTypes type) {
-		this.orderByClause = new OrderClause<>(function, type);
+		this.orderBy = function;
+		this.orderType = type;
 		return this;
 	}
 
@@ -138,7 +147,7 @@ public class Query<T extends BaseEntity> {
 			if (column.isForeignKey()) {
 				foreignKeyList.add(new ForeignKeyReference(
 						column.getReference(),
-						column.getColumn().getAnnotation(ForeignKeyObject.class).value(),
+						column.getColumn().getAnnotation(ForeignKeyEntity.class).value(),
 						Utilities.getTableName(column.getColumn().getType()),
 						column.getAlias()));
 				continue;
@@ -150,19 +159,19 @@ public class Query<T extends BaseEntity> {
 			builder.append(" left join `").append(foreignKey.getChildTable()).append("` ").append(foreignKey.getAlias()).append(" on `").append(foreignKey.getParentClass()).append("`.").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
 		}
 		var constraints = QueryConstraints.getConstraints(this.type);
-		if (this.whereClause == null) {
-			this.whereClause = constraints;
+		var clauseCopy = this.whereClause;
+		if (clauseCopy == null) {
+			clauseCopy = constraints;
 		} else {
-			this.whereClause = this.whereClause.and(constraints);
+			clauseCopy = clauseCopy.and(constraints);
 		}
 
-		var whereSQL = Lambda2Sql.toSql(this.whereClause, tableName);
-		builder.append(" where ").append(whereSQL);
-		if (orderByClause != null) {
+		builder.append(" where ").append(Lambda2Sql.toSql(clauseCopy, tableName));
+		if (orderBy != null) {
 			builder.append(" order by ")
-					.append(Lambda2Sql.toSql(this.orderByClause.getFunction(), tableName))
+					.append(Lambda2Sql.toSql(this.orderBy, tableName))
 					.append(" ")
-					.append(this.orderByClause.getOrderType().getSql());
+					.append(this.orderType.getSql());
 		}
 		if (this.limit != null) {
 			builder.append(" limit ").append(this.limit);

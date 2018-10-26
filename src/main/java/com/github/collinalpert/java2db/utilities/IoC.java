@@ -9,9 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @author Collin Alpert
  * An <pre>Inversion of Control</pre> container.
  * It is responsible for registering and resolving services and custom mappers.
+ *
+ * @author Collin Alpert
  */
 public class IoC {
 
@@ -26,6 +27,8 @@ public class IoC {
 
 	/**
 	 * Creates an instance of any class with an empty constructor.
+	 * It is used to create a new instance of the entity classes, so they can be filled with values.
+	 * This is why every entity class needs an empty constructor.
 	 *
 	 * @param clazz The class to be constructed.
 	 * @param <E>   The type of the entity.
@@ -108,7 +111,7 @@ public class IoC {
 	 * @param clazz  An entity class.
 	 * @param mapper The mapper class for the entity.
 	 * @param <E>    The type of the entity.
-	 * @param <M>    The type of the service class.
+	 * @param <M>    The type of the mapper class.
 	 */
 	public static <E extends BaseEntity, M extends Mapper<E>> void registerMapper(Class<E> clazz, M mapper) {
 		mappers.put(clazz, mapper);

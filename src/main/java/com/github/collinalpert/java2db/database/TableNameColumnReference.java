@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.database;
 
-import com.github.collinalpert.java2db.annotations.ForeignKeyObject;
+import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 
 import java.lang.reflect.Field;
 
@@ -60,7 +60,7 @@ public class TableNameColumnReference {
 	}
 
 	public boolean isForeignKey() {
-		return column.getAnnotation(ForeignKeyObject.class) != null;
+		return column.getAnnotation(ForeignKeyEntity.class) != null;
 	}
 
 	public String getIdentifier() {

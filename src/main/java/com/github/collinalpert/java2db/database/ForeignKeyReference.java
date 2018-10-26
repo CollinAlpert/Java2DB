@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.database;
 
 /**
- * Describes a foreign key reference containing the table and column of the
+ * Describes a foreign key reference to a specific table.
  *
  * @author Collin Alpert
  */

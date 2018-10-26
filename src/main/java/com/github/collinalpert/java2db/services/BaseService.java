@@ -178,7 +178,7 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * @return a {@link Query} object with which a DQL statement can be build, using operations like order by, limit etc.
 	 */
-	private Query<T> query() {
+	protected Query<T> createQuery() {
 		if (IoC.isMapperRegistered(type)) {
 			return new Query<>(type, IoC.resolveMapper(type));
 		}
@@ -194,7 +194,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return An entity matching the result of the query.
 	 */
 	protected Optional<T> getSingle(SqlPredicate<T> predicate) {
-		return query().where(predicate).getFirst();
+		return createQuery().where(predicate).getFirst();
 	}
 
 	/**
@@ -206,7 +206,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list of entities matching the result of the query.
 	 */
 	protected Query<T> getMultiple(SqlPredicate<T> predicate) {
-		return query().where(predicate);
+		return createQuery().where(predicate);
 	}
 
 	/**

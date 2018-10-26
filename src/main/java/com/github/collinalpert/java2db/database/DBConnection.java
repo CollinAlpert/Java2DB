@@ -46,7 +46,7 @@ public class DBConnection implements Closeable {
 
 	/**
 	 * Specifies the port to connect to the database on.
-	 * If not specified, it will be set by the default ports based on the {@link DBConnection#DATABASE_TYPE}.
+	 * This property is optional. If not specified, it will be set by the default ports based on the {@link DBConnection#DATABASE_TYPE}.
 	 */
 	public static int PORT;
 

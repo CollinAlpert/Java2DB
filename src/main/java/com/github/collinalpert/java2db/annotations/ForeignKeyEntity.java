@@ -14,6 +14,6 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ForeignKeyObject {
+public @interface ForeignKeyEntity {
 	String value();
 }
