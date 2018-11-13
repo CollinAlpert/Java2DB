@@ -29,13 +29,19 @@ import java.util.stream.Collectors;
  */
 public class BaseService<T extends BaseEntity> {
 
+	private static final DateTimeFormatter dateTimeFormatter;
+	private static final DateTimeFormatter dateFormatter;
+	private static final DateTimeFormatter timeFormatter;
+
+	static {
+		dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+		dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+		timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+	}
+
 	private final Class<T> type;
 	private final String tableName;
 	private final BaseMapper<T> baseMapper;
-
-	private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-	private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-	private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
 
 	/**
@@ -60,7 +66,7 @@ public class BaseService<T extends BaseEntity> {
 		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
 		var databaseFields = Utilities.getEntityFields(instance.getClass()).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
 		insertQuery.append(databaseFields).append(") values");
-		List<String> values = new ArrayList<>();
+		var values = new ArrayList<String>();
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
@@ -75,7 +81,7 @@ public class BaseService<T extends BaseEntity> {
 				}
 				if (value instanceof Boolean) {
 					var bool = (boolean) value;
-					values.add(Integer.toString(bool ? 1 : 0));
+					values.add(bool ? "1" : "0");
 					return;
 				}
 				if (value instanceof LocalDateTime) {
@@ -126,7 +132,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public long count(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select count(*) from %s where %s", tableName, Lambda2Sql.toSql(predicate, tableName)))) {
+			try (var result = connection.execute(String.format("select count(*) from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
 					return result.getLong("count(*)");
 				}
@@ -134,7 +140,7 @@ public class BaseService<T extends BaseEntity> {
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new IllegalArgumentException("Could not get amount of rows for this predicate.");
+			throw new IllegalArgumentException(String.format("Could not get amount of rows in table %s for this predicate.", this.tableName));
 		}
 	}
 
@@ -176,7 +182,7 @@ public class BaseService<T extends BaseEntity> {
 	//region Read
 
 	/**
-	 * @return a {@link Query} object with which a DQL statement can be build, using operations like order by, limit etc.
+	 * @return a {@link Query} object with which a DQL statement can be built, using operations like order by, limit etc.
 	 */
 	protected Query<T> createQuery() {
 		if (IoC.isMapperRegistered(type)) {
@@ -290,13 +296,14 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void update(T instance) throws SQLException {
 		var updateQuery = new StringBuilder("update ").append(tableName).append(" set ");
-		ArrayList<String> fieldSetterList = new ArrayList<>();
+		var fieldSetterList = new ArrayList<String>();
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
 				var value = field.get(instance);
 				if (value == null) {
 					fieldSetterList.add(String.format("`%s` = null", field.getName()));
+					return;
 				}
 				if (value instanceof String) {
 					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), value));
@@ -375,6 +382,11 @@ public class BaseService<T extends BaseEntity> {
 	}
 	//endregion
 
+	/**
+	 * Gets the generic type of this class.
+	 *
+	 * @return The entity class used as a generic type for this BaseService.
+	 */
 	@SuppressWarnings("unchecked")
 	private Class<T> getGenericType() {
 		return ((Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);

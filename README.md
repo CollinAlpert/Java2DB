@@ -94,7 +94,10 @@ That's it! Now we can access the database using the services with simple predefi
 Custom methods can be defined in the respective service using the 
 ``getSingle`` or ``getMultiple`` methods provided by the ``BaseService`` class. 
 When using ``getMultiple`` method, you can use some more query options, like ``where``, ``orderBy`` and ``limit`` 
-in the returned ``Query`` object.\
+in the returned ``Query`` object.
+
+It is also possible to achieve ``LIKE`` operations using the String ``startsWith``, ``endsWith`` and ``contains`` methods on a String field.
+
 For counting functionality, the ``BaseService`` provides a ``count`` method. 
 You can use it to either count all rows in a table, or to count all rows which match a certain condition.\
 If you would like to check if a certain record exists in a table, you can use the ``any`` method provided by the ``BaseService``.
@@ -129,7 +132,7 @@ First, include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.4.3</version>
+    <version>2.5</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. To begin using this library, you need to do two things on program start:
