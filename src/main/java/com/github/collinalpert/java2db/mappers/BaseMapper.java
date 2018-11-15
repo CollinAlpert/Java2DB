@@ -18,6 +18,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Default mapper for converting a {@link ResultSet} to the respective Java entity.
@@ -39,6 +40,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 * @return An Optional which contains the Java entity if the query was successful.
 	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
+	@Override
 	public Optional<T> map(ResultSet set) throws SQLException {
 		T entity = IoC.resolve(clazz);
 		if (!set.next()) {
@@ -58,6 +60,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 * @return A list of Java entities.
 	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
+	@Override
 	public List<T> mapToList(ResultSet set) throws SQLException {
 		var list = new ArrayList<T>();
 		while (set.next()) {
@@ -68,6 +71,26 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 		set.close();
 		UniqueIdentifier.unset();
 		return list;
+	}
+
+	/**
+	 * Maps a {@link ResultSet} with multiple rows to a {@code Stream} of Java entities.
+	 *
+	 * @param set The {@link ResultSet} to map.
+	 * @return A {@code Stream} of Java entities.
+	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
+	 */
+	@Override
+	public Stream<T> mapToStream(ResultSet set) throws SQLException {
+		Stream<T> stream = Stream.empty();
+		while (set.next()) {
+			var entity = IoC.resolve(clazz);
+			setFields(set, entity);
+			stream = Stream.concat(stream, Stream.of(entity));
+		}
+		set.close();
+		UniqueIdentifier.unset();
+		return stream;
 	}
 
 	/**

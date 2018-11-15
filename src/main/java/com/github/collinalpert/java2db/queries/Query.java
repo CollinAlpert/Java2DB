@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * A class representing a DQL statement with different options, including where clauses, order by clauses and limits.
@@ -63,7 +64,7 @@ public class Query<T extends BaseEntity> {
 	}
 
 	/**
-	 * Gets the values returned from the query.
+	 * Gets the values returned from the query as a {@code List}.
 	 *
 	 * @return A list of entities representing the result rows.
 	 */
@@ -73,6 +74,20 @@ public class Query<T extends BaseEntity> {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();
+		}
+	}
+
+	/**
+	 * Gets the values returned from the query as a {@code Stream}.
+	 *
+	 * @return A list of entities representing the result rows.
+	 */
+	public Stream<T> getAsStream() {
+		try (var connection = new DBConnection()) {
+			return mapper.mapToStream(connection.execute(buildQuery()));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Stream.empty();
 		}
 	}
 

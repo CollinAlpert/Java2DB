@@ -70,36 +70,7 @@ public class BaseService<T extends BaseEntity> {
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
-				var value = field.get(instance);
-				if (value == null) {
-					values.add("null");
-					return;
-				}
-				if (value instanceof String) {
-					values.add(String.format("'%s'", value));
-					return;
-				}
-				if (value instanceof Boolean) {
-					var bool = (boolean) value;
-					values.add(bool ? "1" : "0");
-					return;
-				}
-				if (value instanceof LocalDateTime) {
-					var dateTime = (LocalDateTime) value;
-					values.add(String.format("'%s'", dateTimeFormatter.format(dateTime)));
-					return;
-				}
-				if (value instanceof LocalDate) {
-					var date = (LocalDate) value;
-					values.add(String.format("'%s'", dateFormatter.format(date)));
-					return;
-				}
-				if (value instanceof LocalTime) {
-					var time = (LocalTime) value;
-					values.add(String.format("'%s'", timeFormatter.format(time)));
-					return;
-				}
-				values.add(value.toString());
+				values.add(convertObject(field.get(instance)));
 			} catch (IllegalAccessException e) {
 				System.err.printf("Unable to get value from field %s for type %s\n", field.getName(), type.getSimpleName());
 			}
@@ -300,36 +271,7 @@ public class BaseService<T extends BaseEntity> {
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
-				var value = field.get(instance);
-				if (value == null) {
-					fieldSetterList.add(String.format("`%s` = null", field.getName()));
-					return;
-				}
-				if (value instanceof String) {
-					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), value));
-					return;
-				}
-				if (value instanceof Boolean) {
-					var bool = (boolean) value;
-					fieldSetterList.add(String.format("`%s` = %d", field.getName(), bool ? 1 : 0));
-					return;
-				}
-				if (value instanceof LocalDateTime) {
-					var dateTime = (LocalDateTime) value;
-					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), dateTimeFormatter.format(dateTime)));
-					return;
-				}
-				if (value instanceof LocalDate) {
-					var date = (LocalDate) value;
-					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), dateFormatter.format(date)));
-					return;
-				}
-				if (value instanceof LocalTime) {
-					var time = (LocalTime) value;
-					fieldSetterList.add(String.format("`%s` = '%s'", field.getName(), timeFormatter.format(time)));
-					return;
-				}
-				fieldSetterList.add(String.format("`%s` = %s", field.getName(), value));
+				fieldSetterList.add(String.format("`%s` = %s", field.getName(), convertObject(field.get(instance))));
 			} catch (IllegalAccessException e) {
 				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), type.getSimpleName());
 			}
@@ -338,7 +280,28 @@ public class BaseService<T extends BaseEntity> {
 				.append(" where id = ").append(instance.getId());
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery.toString());
-			Utilities.logf("%s with id %d was successfully updated", type.getSimpleName(), instance.getId());
+			Utilities.logf("%s with id %d was successfully updated.", type.getSimpleName(), instance.getId());
+		}
+	}
+
+	/**
+	 * Updates a specific column for a record in a table.
+	 *
+	 * @param entityId The id of the record.
+	 * @param column   The column to update.
+	 * @param newValue The new value of the column.
+	 * @param <R>      The data type of the column. It must be the same as the data type of the new value.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
+	 */
+	public <R> void update(long entityId, SqlFunction<T, R> column, R newValue) throws SQLException {
+		var query = new StringBuilder("update ");
+		query.append(this.tableName).append(" set ").append(Lambda2Sql.toSql(column, this.tableName))
+				.append(" = ").append(convertObject(newValue)).append(" where ").append(this.tableName)
+				.append(".id = ").append(entityId).append(';');
+		try (var connection = new DBConnection()) {
+			connection.update(query.toString());
+			Utilities.logf("%s with id %d was successfully updated.", type.getSimpleName(), entityId);
 		}
 	}
 	//endregion
@@ -390,5 +353,37 @@ public class BaseService<T extends BaseEntity> {
 	@SuppressWarnings("unchecked")
 	private Class<T> getGenericType() {
 		return ((Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);
+	}
+
+	/**
+	 * Converts a Java object to its SQL representation.
+	 *
+	 * @param value The value to convert.
+	 * @return The SQL version of a Java value.
+	 */
+	private String convertObject(Object value) {
+		if (value == null) {
+			return "null";
+		}
+		if (value instanceof String) {
+			return "'" + value + "'";
+		}
+		if (value instanceof Boolean) {
+			var bool = (boolean) value;
+			return bool ? "1" : "0";
+		}
+		if (value instanceof LocalDateTime) {
+			var dateTime = (LocalDateTime) value;
+			return "'" + dateTimeFormatter.format(dateTime) + "'";
+		}
+		if (value instanceof LocalDate) {
+			var date = (LocalDate) value;
+			return "'" + dateFormatter.format(date) + "'";
+		}
+		if (value instanceof LocalTime) {
+			var time = (LocalTime) value;
+			return "'" + timeFormatter.format(time) + "'";
+		}
+		return value.toString();
 	}
 }
