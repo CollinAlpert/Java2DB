@@ -61,8 +61,9 @@ public class BaseService<T extends BaseEntity> {
 	 * @param instance The instance to create on the database.
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
+	 * @return The id of the newly created record.
 	 */
-	public void create(T instance) throws SQLException {
+	public long create(T instance) throws SQLException {
 		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
 		var databaseFields = Utilities.getEntityFields(instance.getClass()).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
 		insertQuery.append(databaseFields).append(") values");
@@ -78,8 +79,9 @@ public class BaseService<T extends BaseEntity> {
 		values.add("default");
 		insertQuery.append(" (").append(String.join(", ", values)).append(")");
 		try (var connection = new DBConnection()) {
-			connection.update(insertQuery.toString());
+			var id = connection.update(insertQuery.toString());
 			Utilities.logf("%s successfully created!", type.getSimpleName());
+			return id;
 		}
 	}
 	//endregion

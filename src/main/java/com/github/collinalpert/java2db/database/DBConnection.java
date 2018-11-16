@@ -145,13 +145,19 @@ public class DBConnection implements Closeable {
 	 * This command is used for any DDL/DML queries.
 	 *
 	 * @param query The query to be executed.
+	 * @return the last generated ID. This return value should only be used with INSERT statements.
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
-	public void update(String query) throws SQLException {
+	public long update(String query) throws SQLException {
 		var statement = connection.createStatement();
 		Utilities.log(query);
-		statement.executeUpdate(query);
+		statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
 		statement.closeOnCompletion();
+		var set = statement.getGeneratedKeys();
+		if (set.next()) {
+			return set.getLong(1);
+		}
+		return -1;
 	}
 
 	/**
@@ -159,16 +165,22 @@ public class DBConnection implements Closeable {
 	 *
 	 * @param query  The query to be executed.
 	 * @param params The Java parameters to be inserted into the query.
+	 * @return the last generated ID. This return value should only be used with INSERT statements.
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
-	public void update(String query, Object... params) throws SQLException {
-		var statement = connection.prepareStatement(query);
+	public long update(String query, Object... params) throws SQLException {
+		var statement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
 		Utilities.log(query);
 		statement.executeUpdate();
 		statement.closeOnCompletion();
+		var set = statement.getGeneratedKeys();
+		if (set.next()) {
+			return set.getLong(1);
+		}
+		return -1;
 	}
 
 	/**

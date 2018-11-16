@@ -6,7 +6,7 @@
 
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.5.1</version>
+    <version>2.5.2</version>
     <packaging>jar</packaging>
 
     <name>Java2DB</name>
