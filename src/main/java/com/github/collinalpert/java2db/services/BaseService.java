@@ -245,7 +245,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return All entities in this table.
 	 */
 	public List<T> getAll() {
-		return getMultiple(x -> true).get();
+		return getMultiple(x -> true).toList();
 	}
 
 	/**
@@ -255,7 +255,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list with the maximum size of the parameter specified.
 	 */
 	public List<T> getAll(int limit) {
-		return getMultiple(x -> true).limit(limit).get();
+		return getMultiple(x -> true).limit(limit).toList();
 	}
 
 	/**
@@ -276,7 +276,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
 	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType) {
-		return getMultiple(x -> true).orderBy(orderBy, sortingType).get();
+		return getMultiple(x -> true).orderBy(orderBy, sortingType).toList();
 	}
 
 	/**
@@ -299,7 +299,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list with the maximum size of the parameter specified and in an ascending order.
 	 */
 	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType, int limit) {
-		return getMultiple(x -> true).orderBy(orderBy, sortingType).limit(limit).get();
+		return getMultiple(x -> true).orderBy(orderBy, sortingType).limit(limit).toList();
 	}
 	//endregion
 

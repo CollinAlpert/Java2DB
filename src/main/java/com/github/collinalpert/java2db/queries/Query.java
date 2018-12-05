@@ -68,7 +68,7 @@ public class Query<T extends BaseEntity> {
 	 *
 	 * @return A list of entities representing the result rows.
 	 */
-	public List<T> get() {
+	public List<T> toList() {
 		try (var connection = new DBConnection()) {
 			return mapper.mapToList(connection.execute(buildQuery()));
 		} catch (SQLException e) {
@@ -82,7 +82,7 @@ public class Query<T extends BaseEntity> {
 	 *
 	 * @return A list of entities representing the result rows.
 	 */
-	public Stream<T> getAsStream() {
+	public Stream<T> toStream() {
 		try (var connection = new DBConnection()) {
 			return mapper.mapToStream(connection.execute(buildQuery()));
 		} catch (SQLException e) {

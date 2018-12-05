@@ -25,6 +25,6 @@ public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntit
 	 * @return A list of entities matching a certain description.
 	 */
 	public List<T> getByDescription(String description) {
-		return getMultiple(x -> x.getDescription() == description).get();
+		return getMultiple(x -> x.getDescription() == description).toList();
 	}
 }
