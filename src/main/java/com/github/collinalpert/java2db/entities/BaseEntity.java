@@ -16,7 +16,7 @@ public class BaseEntity {
 
 	/**
 	 * This setter only exists for frameworks like Spring, where a form needs to set this id.
-	 * It is <b>greatly</b> discouraged from using this setter directly.
+	 * It is <b>greatly</b> discouraged from using this setter directly and it's effects will not be considered with any of the CRUD operations.
 	 *
 	 * @param id The id of the entity.
 	 */

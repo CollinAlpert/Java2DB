@@ -47,6 +47,7 @@ public class Utilities {
 					.collect(Collectors.toList()));
 			instanceClass = instanceClass.getSuperclass();
 		} while (instanceClass != delimiter);
+
 		return fields;
 	}
 
@@ -69,7 +70,7 @@ public class Utilities {
 	 */
 	public static List<TableNameColumnReference> getAllFields(Class<? extends BaseEntity> instanceClass, String alias) {
 		var fields = new LinkedList<TableNameColumnReference>();
-		for (Field field : getEntityFields(instanceClass, true)) {
+		for (var field : getEntityFields(instanceClass, true)) {
 			if (field.getAnnotation(ForeignKeyEntity.class) != null) {
 				var tempAlias = UniqueIdentifier.generate(getTableName(field.getType()).substring(0, 1), field.getName());
 				fields.add(new TableNameColumnReference(getTableName(instanceClass), field, tempAlias, alias));
@@ -78,6 +79,7 @@ public class Utilities {
 				fields.add(new TableNameColumnReference(getTableName(instanceClass), field, alias, ""));
 			}
 		}
+
 		return fields;
 	}
 
@@ -114,6 +116,7 @@ public class Utilities {
 		if (tableNameAnnotation == null) {
 			return type.getSimpleName().toLowerCase();
 		}
+
 		return tableNameAnnotation.value();
 	}
 }

@@ -31,6 +31,7 @@ public class QueryConstraints {
 		if (clazz == BaseEntity.class) {
 			return (SqlPredicate<E>) selectConstraints.getOrDefault(BaseEntity.class, x -> true);
 		}
+
 		var existingPredicate = (SqlPredicate<E>) selectConstraints.getOrDefault(clazz, x -> true);
 		Class<E> superClass = (Class<E>) clazz.getSuperclass();
 		return existingPredicate.and(getConstraints(superClass));
@@ -51,6 +52,7 @@ public class QueryConstraints {
 			selectConstraints.replace(clazz, existingPredicate.and(predicate));
 			return;
 		}
+
 		selectConstraints.put(clazz, predicate);
 	}
 }

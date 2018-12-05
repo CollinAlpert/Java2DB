@@ -106,6 +106,7 @@ public class DBConnection implements Closeable {
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
+
 		Utilities.log(query);
 		var set = statement.executeQuery();
 		statement.closeOnCompletion();
@@ -128,6 +129,7 @@ public class DBConnection implements Closeable {
 		if (set.next()) {
 			return set.getLong(1);
 		}
+
 		return -1;
 	}
 
@@ -144,6 +146,7 @@ public class DBConnection implements Closeable {
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
+
 		Utilities.log(query);
 		statement.executeUpdate();
 		statement.closeOnCompletion();
@@ -151,6 +154,7 @@ public class DBConnection implements Closeable {
 		if (set.next()) {
 			return set.getLong(1);
 		}
+
 		return -1;
 	}
 

@@ -58,6 +58,7 @@ public class IoC {
 		if (!service.isPresent()) {
 			throw new IllegalArgumentException(String.format("An instance of the service %s has not been registered yet. Please use the \"registerService\" method.", clazz.getSimpleName()));
 		}
+
 		return clazz.cast(service.get());
 	}
 
@@ -74,6 +75,7 @@ public class IoC {
 		if (!mappers.containsKey(clazz)) {
 			throw new IllegalArgumentException(String.format("An instance of a mapper for the entity %s has not been registered yet. Please use the \"registerMapper\" method.", clazz.getSimpleName()));
 		}
+
 		return (Mapper<E>) mappers.get(clazz);
 	}
 
@@ -91,6 +93,7 @@ public class IoC {
 		if (mappers.containsKey(clazz)) {
 			return (Mapper<E>) mappers.get(clazz);
 		}
+
 		return defaultMapper;
 	}
 
@@ -107,6 +110,7 @@ public class IoC {
 		if (!services.containsKey(clazz)) {
 			throw new IllegalArgumentException(String.format("An instance of a service for the entity %s has not been registered yet. Please use the \"registerService\" method.", clazz.getSimpleName()));
 		}
+
 		return (S) services.get(clazz);
 	}
 

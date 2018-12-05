@@ -167,12 +167,15 @@ public class Query<T extends BaseEntity> {
 						column.getAlias()));
 				continue;
 			}
+
 			fieldList.add(String.format("%s as %s", column.getSQLNotation(), column.getAliasNotation()));
 		}
+
 		builder.append(String.join(", ", fieldList)).append(" from ").append(tableName);
 		for (var foreignKey : foreignKeyList) {
 			builder.append(" left join `").append(foreignKey.getChildTable()).append("` ").append(foreignKey.getAlias()).append(" on `").append(foreignKey.getParentClass()).append("`.").append(foreignKey.getParentForeignKey()).append(" = ").append(foreignKey.getAlias()).append(".id");
 		}
+
 		var constraints = QueryConstraints.getConstraints(this.type);
 		var clauseCopy = this.whereClause;
 		if (clauseCopy == null) {
@@ -188,9 +191,11 @@ public class Query<T extends BaseEntity> {
 					.append(" ")
 					.append(this.orderType.getSql());
 		}
+
 		if (this.limit != null) {
 			builder.append(" limit ").append(this.limit);
 		}
+
 		return builder.toString();
 	}
 

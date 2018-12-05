@@ -47,6 +47,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 			UniqueIdentifier.unset();
 			return Optional.empty();
 		}
+
 		setFields(set, entity);
 		set.close();
 		UniqueIdentifier.unset();
@@ -68,6 +69,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 			setFields(set, entity);
 			list.add(entity);
 		}
+
 		set.close();
 		UniqueIdentifier.unset();
 		return list;
@@ -88,6 +90,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 			setFields(set, entity);
 			stream = Stream.concat(stream, Stream.of(entity));
 		}
+
 		set.close();
 		UniqueIdentifier.unset();
 		return stream;
@@ -121,6 +124,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 					if (!BaseEntity.class.isAssignableFrom(field.getType())) {
 						throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
 					}
+
 					foreignKeyFields.add(field);
 					var foreignKeyObject = IoC.resolve((Class<? extends BaseEntity>) field.getType());
 					setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
@@ -149,6 +153,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 				e.printStackTrace();
 			}
 		}
+
 		validateEntityForNull(entity, foreignKeyFields);
 	}
 
@@ -170,6 +175,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 				if (value == null) {
 					field.set(entity, null);
 				}
+
 			} catch (NoSuchFieldException | IllegalAccessException e) {
 				e.printStackTrace();
 			}

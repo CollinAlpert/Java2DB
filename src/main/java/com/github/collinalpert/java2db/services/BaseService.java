@@ -157,6 +157,7 @@ public class BaseService<T extends BaseEntity> {
 				if (result.next()) {
 					return result.getLong("count(*)");
 				}
+
 				return 0;
 			}
 		} catch (SQLException e) {
@@ -180,6 +181,7 @@ public class BaseService<T extends BaseEntity> {
 				if (result.next()) {
 					return result.getLong("count(*)") == 1;
 				}
+
 				return false;
 			}
 		} catch (SQLException e) {
@@ -323,8 +325,8 @@ public class BaseService<T extends BaseEntity> {
 				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), type.getSimpleName());
 			}
 		});
-		updateQuery.append(String.join(", ", fieldSetterList))
-				.append(" where id = ").append(instance.getId());
+
+		updateQuery.append(String.join(", ", fieldSetterList)).append(" where id = ").append(instance.getId());
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery.toString());
 			Utilities.logf("%s with id %d was successfully updated.", type.getSimpleName(), instance.getId());
@@ -412,25 +414,31 @@ public class BaseService<T extends BaseEntity> {
 		if (value == null) {
 			return "null";
 		}
+
 		if (value instanceof String) {
 			return "'" + value + "'";
 		}
+
 		if (value instanceof Boolean) {
 			var bool = (boolean) value;
 			return bool ? "1" : "0";
 		}
+
 		if (value instanceof LocalDateTime) {
 			var dateTime = (LocalDateTime) value;
 			return "'" + dateTimeFormatter.format(dateTime) + "'";
 		}
+
 		if (value instanceof LocalDate) {
 			var date = (LocalDate) value;
 			return "'" + dateFormatter.format(date) + "'";
 		}
+
 		if (value instanceof LocalTime) {
 			var time = (LocalTime) value;
 			return "'" + timeFormatter.format(time) + "'";
 		}
+
 		return value.toString();
 	}
 
