@@ -6,7 +6,7 @@
 
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>2.5.2</version>
+    <version>3.0</version>
     <packaging>jar</packaging>
 
     <name>Java2DB</name>
@@ -68,11 +68,6 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.12</version>
-        </dependency>
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>6.5.4.jre10-preview</version>
         </dependency>
 
         <dependency>
