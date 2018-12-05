@@ -78,6 +78,23 @@ public class IoC {
 	}
 
 	/**
+	 * Resolves a mapper class. If an instance of this mapper has not been registered yet,
+	 * a backup mapper is used.
+	 *
+	 * @param clazz         The type of the corresponding mapper.
+	 * @param defaultMapper The default mapper, in case a custom mapper is not registered for this type.
+	 * @param <E>           The type of the mapper.
+	 * @return The mapper for the entity. If is does not exists, the default mapper is returned.
+	 */
+	@SuppressWarnings("unchecked")
+	public static <E extends BaseEntity> Mapper<E> resolveMapperOrElse(Class<E> clazz, Mapper<E> defaultMapper) {
+		if (mappers.containsKey(clazz)) {
+			return (Mapper<E>) mappers.get(clazz);
+		}
+		return defaultMapper;
+	}
+
+	/**
 	 * Resolves a service class by the entity it was registered with.
 	 *
 	 * @param clazz The entity class corresponding to a service class.

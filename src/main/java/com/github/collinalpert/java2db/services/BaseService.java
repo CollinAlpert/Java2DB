@@ -2,7 +2,9 @@ package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
+import com.github.collinalpert.java2db.mappers.Mapper;
 import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.IoC;
@@ -11,6 +13,7 @@ import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -20,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 /**
@@ -39,17 +43,28 @@ public class BaseService<T extends BaseEntity> {
 		timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 	}
 
+	/**
+	 * The generic type of this service.
+	 */
 	private final Class<T> type;
-	private final String tableName;
-	private final BaseMapper<T> baseMapper;
 
+	/**
+	 * Represents the table name of the entity this services corresponds to.
+	 * It contains the table name with escaping backticks.
+	 */
+	private final String tableName;
+
+	/**
+	 * The mapper used for mapping database objects to Java entities in this service.
+	 */
+	private final Mapper<T> mapper;
 
 	/**
 	 * Constructor for the base class of all services. It is not possible to create instances of it.
 	 */
 	protected BaseService() {
 		this.type = getGenericType();
-		this.baseMapper = new BaseMapper<>(type);
+		this.mapper = IoC.resolveMapperOrElse(type, new BaseMapper<>(type));
 		this.tableName = String.format("`%s`", Utilities.getTableName(type));
 	}
 
@@ -59,29 +74,62 @@ public class BaseService<T extends BaseEntity> {
 	 * Creates this Java entity on the database.
 	 *
 	 * @param instance The instance to create on the database.
-	 * @throws SQLException if the query cannot be executed due to database constraints
-	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 * @return The id of the newly created record.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 */
 	public long create(T instance) throws SQLException {
-		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
-		var databaseFields = Utilities.getEntityFields(instance.getClass()).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
-		insertQuery.append(databaseFields).append(") values");
+		var insertQuery = createInsertHeader();
 		var values = new ArrayList<String>();
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			try {
-				values.add(convertObject(field.get(instance)));
-			} catch (IllegalAccessException e) {
-				System.err.printf("Unable to get value from field %s for type %s\n", field.getName(), type.getSimpleName());
-			}
+			values.add(getSQLValue(field, instance));
 		});
+
+		//For auto generating the id.
 		values.add("default");
-		insertQuery.append(" (").append(String.join(", ", values)).append(")");
+		insertQuery.append("(").append(String.join(", ", values)).append(");");
 		try (var connection = new DBConnection()) {
 			var id = connection.update(insertQuery.toString());
 			Utilities.logf("%s successfully created!", type.getSimpleName());
 			return id;
+		}
+	}
+
+	/**
+	 * Creates a list of entities on the database.
+	 * It is recommended to use this method instead of iterating over the list and
+	 * calling a normal {@link #create(BaseEntity)} on each entity separately.
+	 *
+	 * @param instances The list of entites to create on the database.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
+	 */
+	public void createMultiple(List<T> instances) throws SQLException {
+		if (instances.isEmpty()) {
+			return;
+		}
+
+		var insertQuery = createInsertHeader();
+		var rows = new String[instances.size()];
+		StringJoiner joiner;
+		for (int i = 0, instancesSize = instances.size(); i < instancesSize; i++) {
+			var entityFields = Utilities.getEntityFields(instances.get(i).getClass(), BaseEntity.class);
+			joiner = new StringJoiner(", ", "(", ")");
+			for (var entityField : entityFields) {
+				entityField.setAccessible(true);
+				joiner.add(getSQLValue(entityField, instances.get(i)));
+			}
+
+			//For auto generating the id.
+			joiner.add("default");
+			rows[i] = joiner.toString();
+		}
+
+		insertQuery.append(String.join(", ", rows));
+		try (var connection = new DBConnection()) {
+			connection.update(insertQuery.toString());
+			Utilities.logf("%s entities were successfully created.", type.getSimpleName());
 		}
 	}
 	//endregion
@@ -158,10 +206,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return a {@link Query} object with which a DQL statement can be built, using operations like order by, limit etc.
 	 */
 	protected Query<T> createQuery() {
-		if (IoC.isMapperRegistered(type)) {
-			return new Query<>(type, IoC.resolveMapper(type));
-		}
-		return new Query<>(type, baseMapper);
+		return new Query<>(type, mapper);
 	}
 
 	/**
@@ -387,5 +432,32 @@ public class BaseService<T extends BaseEntity> {
 			return "'" + timeFormatter.format(time) + "'";
 		}
 		return value.toString();
+	}
+
+	/**
+	 * Will create a {@link StringBuilder} containing the beginning of a DML INSERT statement.
+	 *
+	 * @return An INSERT statement up to the VALUES keyword.
+	 */
+	private StringBuilder createInsertHeader() {
+		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
+		var databaseFields = Utilities.getEntityFields(type).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
+		insertQuery.append(databaseFields).append(") values ");
+		return insertQuery;
+	}
+
+	/**
+	 * Returns a field value from ab entity in its SQL equivalent.
+	 *
+	 * @param entityField    The value's field.
+	 * @param entityInstance The entity containing the value
+	 * @return A {@code String} representing the SQL value of the entity field.
+	 */
+	private String getSQLValue(Field entityField, T entityInstance) {
+		try {
+			return convertObject(entityField.get(entityInstance));
+		} catch (IllegalAccessException e) {
+			throw new IllegalEntityFieldAccessException(entityField.getName(), type.getSimpleName(), e.getMessage());
+		}
 	}
 }

@@ -58,7 +58,7 @@ public class Person extends BaseEntity {
 	
 	private int age;
 	
-	private int genderId;
+	private long genderId;
 	
 	// That way Java2DB will know that this field does not exist on the database.
 	// It will be filled accordingly.

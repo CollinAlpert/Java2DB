@@ -194,8 +194,7 @@ public class DBConnection implements Closeable {
 			return !connection.isClosed();
 		} catch (SQLException e) {
 			System.err.println("Could not determine connection status");
-			isConnectionValid = false;
-			return false;
+			return isConnectionValid = false;
 		}
 	}
 
@@ -205,9 +204,12 @@ public class DBConnection implements Closeable {
 	@Override
 	public void close() {
 		try {
-			connection.close();
+			if (connection != null) {
+				connection.close();
+			}
 		} catch (SQLException e) {
 			System.err.println("Could not close database connection");
+			e.printStackTrace();
 		} finally {
 			isConnectionValid = false;
 		}
