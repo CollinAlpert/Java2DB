@@ -20,7 +20,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.StringJoiner;
@@ -64,8 +63,8 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	protected BaseService() {
 		this.type = getGenericType();
-		this.mapper = IoC.resolveMapperOrElse(type, new BaseMapper<>(type));
-		this.tableName = String.format("`%s`", Utilities.getTableName(type));
+		this.mapper = IoC.resolveMapperOrElse(this.type, new BaseMapper<>(this.type));
+		this.tableName = String.format("`%s`", Utilities.getTableName(this.type));
 	}
 
 	//region Create
@@ -80,18 +79,18 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public long create(T instance) throws SQLException {
 		var insertQuery = createInsertHeader();
-		var values = new ArrayList<String>();
+		var joiner = new StringJoiner(",", "(", ");");
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			values.add(getSQLValue(field, instance));
+			joiner.add(getSQLValue(field, instance));
 		});
 
 		//For auto generating the id.
-		values.add("default");
-		insertQuery.append("(").append(String.join(", ", values)).append(");");
+		joiner.add("default");
+		insertQuery.append(joiner.toString());
 		try (var connection = new DBConnection()) {
 			var id = connection.update(insertQuery.toString());
-			Utilities.logf("%s successfully created!", type.getSimpleName());
+			Utilities.logf("%s successfully created!", this.type.getSimpleName());
 			return id;
 		}
 	}
@@ -129,7 +128,7 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(String.join(", ", rows));
 		try (var connection = new DBConnection()) {
 			connection.update(insertQuery.toString());
-			Utilities.logf("%s entities were successfully created.", type.getSimpleName());
+			Utilities.logf("%s entities were successfully created.", this.type.getSimpleName());
 		}
 	}
 	//endregion
@@ -208,7 +207,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return a {@link Query} object with which a DQL statement can be built, using operations like order by, limit etc.
 	 */
 	protected Query<T> createQuery() {
-		return new Query<>(type, mapper);
+		return new Query<>(this.type, this.mapper);
 	}
 
 	/**
@@ -315,21 +314,21 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(T instance) throws SQLException {
-		var updateQuery = new StringBuilder("update ").append(tableName).append(" set ");
-		var fieldSetterList = new ArrayList<String>();
+		var updateQuery = new StringBuilder("update ").append(this.tableName).append(" set ");
+		var fieldJoiner = new StringJoiner(", ");
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
-				fieldSetterList.add(String.format("`%s` = %s", field.getName(), convertObject(field.get(instance))));
+				fieldJoiner.add(String.format("`%s` = %s", field.getName(), convertObject(field.get(instance))));
 			} catch (IllegalAccessException e) {
-				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), type.getSimpleName());
+				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), this.type.getSimpleName());
 			}
 		});
 
-		updateQuery.append(String.join(", ", fieldSetterList)).append(" where id = ").append(instance.getId());
+		updateQuery.append(fieldJoiner.toString()).append(" where id = ").append(instance.getId());
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery.toString());
-			Utilities.logf("%s with id %d was successfully updated.", type.getSimpleName(), instance.getId());
+			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
 		}
 	}
 
@@ -350,7 +349,7 @@ public class BaseService<T extends BaseEntity> {
 				.append(".id = ").append(entityId).append(';');
 		try (var connection = new DBConnection()) {
 			connection.update(query.toString());
-			Utilities.logf("%s with id %d was successfully updated.", type.getSimpleName(), entityId);
+			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), entityId);
 		}
 	}
 	//endregion
@@ -376,7 +375,7 @@ public class BaseService<T extends BaseEntity> {
 	public void delete(long id) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from %s where %s.id = ?", this.tableName, this.tableName), id);
-			Utilities.logf("%s with id %s successfully deleted!", type.getSimpleName(), id);
+			Utilities.logf("%s with id %s successfully deleted!", this.type.getSimpleName(), id);
 		}
 	}
 
@@ -389,7 +388,7 @@ public class BaseService<T extends BaseEntity> {
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
-			Utilities.logf("%s successfully deleted!", type.getSimpleName());
+			Utilities.logf("%s successfully deleted!", this.type.getSimpleName());
 		}
 	}
 	//endregion
@@ -448,8 +447,8 @@ public class BaseService<T extends BaseEntity> {
 	 * @return An INSERT statement up to the VALUES keyword.
 	 */
 	private StringBuilder createInsertHeader() {
-		var insertQuery = new StringBuilder("insert into ").append(tableName).append(" (");
-		var databaseFields = Utilities.getEntityFields(type).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
+		var insertQuery = new StringBuilder("insert into ").append(this.tableName).append(" (");
+		var databaseFields = Utilities.getEntityFields(this.type).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
 		insertQuery.append(databaseFields).append(") values ");
 		return insertQuery;
 	}
@@ -465,7 +464,7 @@ public class BaseService<T extends BaseEntity> {
 		try {
 			return convertObject(entityField.get(entityInstance));
 		} catch (IllegalAccessException e) {
-			throw new IllegalEntityFieldAccessException(entityField.getName(), type.getSimpleName(), e.getMessage());
+			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
 		}
 	}
 }
