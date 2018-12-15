@@ -1,0 +1,83 @@
+package com.github.collinalpert.java2db.caching;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+
+/**
+ * A simple caching module, which is used for basic caching functionality.
+ * Its main task to cache query results.
+ *
+ * @author Collin Alpert
+ */
+public class CachingModule<T> {
+
+	private Map<String, Entry> cacheEntries;
+
+	public CachingModule() {
+		cacheEntries = new HashMap<>();
+	}
+
+	/**
+	 * Gets an entry from the cache, or creates it if it does not exist using the passed {@code valueFactory}.
+	 *
+	 * @param name         The name of the cache entry.
+	 * @param valueFactory The {@link Supplier} of data, in case the cache does not have an entry or the entry is expired.
+	 * @param expiration   The duration the cache is valid. After this duration is exceeded,
+	 *                     the value will be cached from the passed {@code valueFactory}
+	 * @return The requested value from the cache, if it exists. Otherwise the value from the {@code valueFactory} will be returned.
+	 */
+	public T getOrAdd(String name, Supplier<T> valueFactory, Duration expiration) {
+		final Entry entry;
+		if (cacheEntries.containsKey(name) && (entry = cacheEntries.get(name)) != null && !entry.isExpired()) {
+			return entry.getValue();
+		}
+
+		var value = valueFactory.get();
+		cacheEntries.put(name, new Entry(value, LocalDateTime.now().plus(expiration)));
+		return value;
+	}
+
+	/**
+	 * Invalidates, or "clears", the contents of this cache.
+	 */
+	public void invalidate() {
+		invalidate(null);
+	}
+
+	/**
+	 * Invalidates, or rather removes, a specific cache entry.
+	 * This will prompt a reload the next time a value with this cache name is requested.
+	 *
+	 * @param name The name of the entry in the cache.
+	 */
+	public void invalidate(String name) {
+		if (name == null) {
+			cacheEntries.clear();
+			return;
+		}
+
+		cacheEntries.remove(name);
+	}
+
+	private class Entry {
+
+		private T value;
+		private LocalDateTime expirationDate;
+
+		private Entry(T value, LocalDateTime expirationDate) {
+			this.value = value;
+			this.expirationDate = expirationDate;
+		}
+
+		public T getValue() {
+			return value;
+		}
+
+		private boolean isExpired() {
+			return LocalDateTime.now().isAfter(expirationDate);
+		}
+	}
+}

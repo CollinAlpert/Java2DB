@@ -33,12 +33,12 @@ public class Query<T extends BaseEntity> {
 	private SqlFunction<T, ?> orderBy;
 	private OrderTypes orderType;
 	private Integer limit;
+	private int limitOffset;
 
 
 	/**
 	 * Constructor for creating a DQL statement for a given entity.
-	 * This constructor should not be used directly, but through the
-	 * {@link BaseService#createQuery()} method which every service can use due to inheritance.
+	 * This constructor should not be used directly, but through the DQL methods defined in the {@link BaseService}.
 	 *
 	 * @param type   The entity to query.
 	 * @param mapper The mapper for mapping entities.
@@ -64,7 +64,7 @@ public class Query<T extends BaseEntity> {
 	}
 
 	/**
-	 * Gets the values returned from the query as a {@code List}.
+	 * Executes the query and returns the result as a {@link List}
 	 *
 	 * @return A list of entities representing the result rows.
 	 */
@@ -78,7 +78,7 @@ public class Query<T extends BaseEntity> {
 	}
 
 	/**
-	 * Gets the values returned from the query as a {@code Stream}.
+	 * Executes the query and returns the result as a {@link Stream}
 	 *
 	 * @return A list of entities representing the result rows.
 	 */
@@ -133,6 +133,20 @@ public class Query<T extends BaseEntity> {
 	public Query<T> orderBy(SqlFunction<T, ?> function, OrderTypes type) {
 		this.orderBy = function;
 		this.orderType = type;
+		return this;
+	}
+
+	/**
+	 * Limits the result of the rows returned to a maximum of the passed integer with an offset.
+	 * For example, the call <code>.limit(10, 5)</code> would return the rows 6-15.
+	 *
+	 * @param limit  The maximum of rows to be returned.
+	 * @param offset The offset of the limit.
+	 * @return This {@link Query} object, now with a LIMIT with an OFFSET.
+	 */
+	public Query<T> limit(int limit, int offset) {
+		this.limit = limit;
+		this.limitOffset = offset;
 		return this;
 	}
 
@@ -193,7 +207,7 @@ public class Query<T extends BaseEntity> {
 		}
 
 		if (this.limit != null) {
-			builder.append(" limit ").append(this.limit);
+			builder.append(" limit ").append(this.limitOffset).append(",").append(this.limit);
 		}
 
 		return builder.toString();

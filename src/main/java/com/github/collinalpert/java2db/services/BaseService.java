@@ -5,6 +5,8 @@ import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
 import com.github.collinalpert.java2db.mappers.Mapper;
+import com.github.collinalpert.java2db.paging.CacheablePaginationResult;
+import com.github.collinalpert.java2db.paging.PaginationResult;
 import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.IoC;
@@ -16,10 +18,13 @@ import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.StringJoiner;
@@ -85,7 +90,7 @@ public class BaseService<T extends BaseEntity> {
 			joiner.add(getSQLValue(field, instance));
 		});
 
-		//For auto generating the id.
+		//For using the default database setting for the id.
 		joiner.add("default");
 		insertQuery.append(joiner.toString());
 		try (var connection = new DBConnection()) {
@@ -96,11 +101,24 @@ public class BaseService<T extends BaseEntity> {
 	}
 
 	/**
-	 * Creates a list of entities on the database.
+	 * Creates a variable amount of entities on the database.
+	 *
+	 * @param instances The instances to create.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
+	 * @see #createMultiple(List)
+	 */
+	@SafeVarargs
+	public final void createMultiple(T... instances) throws SQLException {
+		createMultiple(Arrays.asList(instances));
+	}
+
+	/**
+	 * Creates multiple entities on the database.
 	 * It is recommended to use this method instead of iterating over the list and
 	 * calling a normal {@link #create(BaseEntity)} on each entity separately.
 	 *
-	 * @param instances The list of entites to create on the database.
+	 * @param instances The list of entities to create on the database.
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 */
@@ -120,7 +138,7 @@ public class BaseService<T extends BaseEntity> {
 				joiner.add(getSQLValue(entityField, instances.get(i)));
 			}
 
-			//For auto generating the id.
+			//For using the default database setting for the id.
 			joiner.add("default");
 			rows[i] = joiner.toString();
 		}
@@ -133,10 +151,13 @@ public class BaseService<T extends BaseEntity> {
 	}
 	//endregion
 
+	//region Read
+
 	//region Count
 
 	/**
-	 * An overload of the {@link #count(SqlPredicate)} method. It will count all the rows in a table.
+	 * An overload of the {@link #count(SqlPredicate)} method. It will count all the rows that have an id, since this should be a reasonable criteria.
+	 * Use with caution, as this call can take quite a while.
 	 *
 	 * @return The amount of rows in this table.
 	 */
@@ -145,16 +166,16 @@ public class BaseService<T extends BaseEntity> {
 	}
 
 	/**
-	 * Counts the rows matching a certain condition.
+	 * Counts the rows that have an id (which should usually be every row) and match a certain condition. Note that COUNT operations usually are very slow.
 	 *
 	 * @param predicate The condition to test for.
 	 * @return The number of rows matching the condition.
 	 */
 	public long count(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select count(*) from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+			try (var result = connection.execute(String.format("select count(id) from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
-					return result.getLong("count(*)");
+					return result.getLong("count(id)");
 				}
 
 				return 0;
@@ -172,39 +193,41 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * Checks if a table has at least one row.
 	 *
-	 * @return {@code true} if at least one row exists in the table, {@code false} if not.
+	 * @return {@code True} if at least one row exists in the table, {@code false} if not.
 	 */
 	public boolean any() {
-		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select count(*) from (select 1 from %s limit 1) as x", this.tableName))) {
-				if (result.next()) {
-					return result.getLong("count(*)") == 1;
-				}
-
-				return false;
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-			throw new IllegalArgumentException("Could not check if this table has any rows.");
-		}
+		return any(x -> true);
 	}
 
 	/**
 	 * Checks if a value matching the condition exists in the table.
 	 *
 	 * @param predicate The condition to check for.
-	 * @return {@code true} if the predicate matches one or more records, {@code false} if not.
+	 * @return {@code True} if the predicate matches one or more records, {@code false} if not.
 	 */
 	public boolean any(SqlPredicate<T> predicate) {
-		return count(predicate) > 0;
+		try (var connection = new DBConnection()) {
+			try (var result = connection.execute(String.format("select exists(select id from %s where %s limit 1) as result;", this.tableName, Lambda2Sql.toSql(predicate)))) {
+				if (result.next()) {
+					return result.getInt("result") == 1;
+				}
+
+				return false;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new IllegalArgumentException(String.format("Could not check if a row matches this condition on table %s.", this.tableName));
+		}
 	}
 
 	//endregion
 
-	//region Read
+	//region Query
 
 	/**
 	 * @return a {@link Query} object with which a DQL statement can be built, using operations like order by, limit etc.
+	 * If you do not a plain {@link Query}, please consider using the
+	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected Query<T> createQuery() {
 		return new Query<>(this.type, this.mapper);
@@ -246,7 +269,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return All entities in this table.
 	 */
 	public List<T> getAll() {
-		return getMultiple(x -> true).toList();
+		return createQuery().toList();
 	}
 
 	/**
@@ -256,7 +279,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list with the maximum size of the parameter specified.
 	 */
 	public List<T> getAll(int limit) {
-		return getMultiple(x -> true).limit(limit).toList();
+		return createQuery().limit(limit).toList();
 	}
 
 	/**
@@ -277,7 +300,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
 	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType) {
-		return getMultiple(x -> true).orderBy(orderBy, sortingType).toList();
+		return createQuery().orderBy(orderBy, sortingType).toList();
 	}
 
 	/**
@@ -300,8 +323,76 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list with the maximum size of the parameter specified and in an ascending order.
 	 */
 	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType, int limit) {
-		return getMultiple(x -> true).orderBy(orderBy, sortingType).limit(limit).toList();
+		return createQuery().orderBy(orderBy, sortingType).limit(limit).toList();
 	}
+
+	//endregion Query
+
+	//region Pagination
+
+	/**
+	 * Creates a pagination structure that splits the entire table into multiple pages.
+	 * Note that the query to the database for each page is only executed when that specific page is requested and
+	 * <em>not</em> when this method is called.
+	 *
+	 * @param entriesPerPage The number of entries to be displayed on each page.
+	 * @return A pagination which splits up an entire table into multiple pages.
+	 */
+	public PaginationResult<T> createPagination(int entriesPerPage) {
+		return new PaginationResult<>(createPaginationQueries(entriesPerPage));
+	}
+
+	/**
+	 * Creates a pagination structure that splits the result of a query into multiple pages.
+	 * Note that the query to the database for each page is only executed when that specific page is requested and
+	 * <em>not</em> when this method is called.
+	 * The predicate to filter by.
+	 *
+	 * @param predicate      The predicate to filter by.
+	 * @param entriesPerPage The number of entries to be displayed on each page.
+	 * @return A pagination which splits the result of a condition into multiple pages.
+	 */
+	public PaginationResult<T> createPagination(SqlPredicate<T> predicate, int entriesPerPage) {
+		return new PaginationResult<>(createPaginationQueries(predicate, entriesPerPage));
+	}
+
+	/**
+	 * Creates a pagination structure that splits the entire table into multiple pages.
+	 * Note that the query to the database for each page is only executed when that specific page is requested and
+	 * <em>not</em> when this method is called.
+	 * When pages are retrieved, they are stored in a cache, so they can be
+	 * retrieved from there the next time they are requested. Note that this will work, until the specified {@code cacheExpiration}
+	 * is up. After that, the next time a page is requested, it will be reloaded from the database.
+	 *
+	 * @param entriesPerPage  The number of entries to be displayed on each page.
+	 * @param cacheExpiration The time a page is valid in the cache. If a page is requested and in the cache, but expired,
+	 *                        it will be retrieved from the database again and re-stored in the cache.
+	 * @return A pagination which displays a entire table
+	 */
+	public CacheablePaginationResult<T> createPagination(int entriesPerPage, Duration cacheExpiration) {
+		return new CacheablePaginationResult<>(createPaginationQueries(entriesPerPage), cacheExpiration);
+	}
+
+	/**
+	 * Creates a cached pagination structure that splits the result of a query into multiple pages.
+	 * Note that the query to the database for each page is only executed when that specific page is requested and
+	 * <em>not</em> when this method is called.
+	 * When pages are retrieved, they are stored in a cache, so they can be
+	 * retrieved from there the next time they are requested. Note that this will work, until the specified {@code cacheExpiration}
+	 * is up. After that, the next time a page is requested, it will be reloaded from the database.
+	 *
+	 * @param predicate       The predicate to filter by.
+	 * @param entriesPerPage  The number of entries to be displayed on each page.
+	 * @param cacheExpiration The time a page is valid in the cache. If a page is requested and in the cache, but expired,
+	 *                        it will be retrieved from the database again and re-stored in the cache.
+	 * @return A pagination which allows the developer to retrieve specific pages from the result.
+	 */
+	public CacheablePaginationResult<T> createPagination(SqlPredicate<T> predicate, int entriesPerPage, Duration cacheExpiration) {
+		return new CacheablePaginationResult<>(createPaginationQueries(predicate, entriesPerPage), cacheExpiration);
+	}
+
+	//endregion
+
 	//endregion
 
 	//region Update
@@ -466,5 +557,36 @@ public class BaseService<T extends BaseEntity> {
 		} catch (IllegalAccessException e) {
 			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
 		}
+	}
+
+	/**
+	 * An overload of the {@link #createPaginationQueries(SqlPredicate, int)} method.
+	 * It creates queries for getting all the values from a table.
+	 *
+	 * @param entriesPerPage The number of entries to be displayed on each page.
+	 * @return A list of queries containing the definitions for getting specific pages.
+	 */
+	private List<Query<T>> createPaginationQueries(int entriesPerPage) {
+		return createPaginationQueries(x -> true, entriesPerPage);
+	}
+
+	/**
+	 * Creates queries that define the queries for specific pages. Note that this does not execute the queries yet.
+	 *
+	 * @param predicate      A filter to narrow down the queries.
+	 * @param entriesPerPage The number of entries to be displayed on each page.
+	 * @return A list of queries containing the definitions for getting specific pages.
+	 */
+	private List<Query<T>> createPaginationQueries(SqlPredicate<T> predicate, int entriesPerPage) {
+		var count = this.count(predicate);
+		var numberOfPages = Math.ceil(count / (double) entriesPerPage);
+		var queries = new ArrayList<Query<T>>((int) numberOfPages);
+		for (int i = 0; i < numberOfPages; i++) {
+			var offset = i * entriesPerPage;
+			//TODO Refactor the limit-offset-combo for performance in bigger data sets.
+			queries.add(getMultiple(predicate).limit(entriesPerPage, offset));
+		}
+
+		return queries;
 	}
 }
