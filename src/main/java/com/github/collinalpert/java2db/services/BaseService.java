@@ -5,8 +5,8 @@ import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
 import com.github.collinalpert.java2db.mappers.Mapper;
-import com.github.collinalpert.java2db.paging.CacheablePaginationResult;
-import com.github.collinalpert.java2db.paging.PaginationResult;
+import com.github.collinalpert.java2db.pagination.CacheablePaginationResult;
+import com.github.collinalpert.java2db.pagination.PaginationResult;
 import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.IoC;
@@ -173,7 +173,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public long count(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select count(id) from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+			try (var result = connection.execute(String.format("select count(id) from %s where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
 					return result.getLong("count(id)");
 				}

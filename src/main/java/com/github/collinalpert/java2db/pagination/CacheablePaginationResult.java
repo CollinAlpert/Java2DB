@@ -1,4 +1,4 @@
-package com.github.collinalpert.java2db.paging;
+package com.github.collinalpert.java2db.pagination;
 
 import com.github.collinalpert.java2db.caching.CachingModule;
 import com.github.collinalpert.java2db.entities.BaseEntity;

@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Maks a field as ignored meaning it does not exist on the database or should not be filled with values.
+ * Marks a field as ignored, meaning it does not exist on the database or should not be filled with values.
  *
  * @author Collin Alpert
  */
