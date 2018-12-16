@@ -465,7 +465,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void delete(long id) throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from %s where %s.id = ?", this.tableName, this.tableName), id);
+			connection.update(String.format("delete from %s where %s.id = ?;", this.tableName, this.tableName), id);
 			Utilities.logf("%s with id %s successfully deleted!", this.type.getSimpleName(), id);
 		}
 	}
@@ -478,10 +478,23 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from %s where %s", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
+			connection.update(String.format("delete from %s where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 			Utilities.logf("%s successfully deleted!", this.type.getSimpleName());
 		}
 	}
+
+	/**
+	 * Truncates the corresponding table on the database.
+	 *
+	 * @throws SQLException for example if a foreign key references a row in this table.
+	 */
+	public void truncateTable() throws SQLException {
+		try (var connection = new DBConnection()) {
+			connection.update(String.format("truncate table %s;", this.tableName));
+			Utilities.logf("Table %s successfully truncated.", this.tableName);
+		}
+	}
+
 	//endregion
 
 	/**
