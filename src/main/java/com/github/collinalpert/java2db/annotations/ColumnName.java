@@ -6,14 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a field as the correspondent object to a foreign key.
- * This property does not have to exist on the database.
- * Its parameter is the name of the foreign key column.
+ * Sets the name of a column in a table for a POJO field.
  *
  * @author Collin Alpert
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ForeignKeyEntity {
+public @interface ColumnName {
 	String value();
 }

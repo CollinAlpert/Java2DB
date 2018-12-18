@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.mappers;
 
+import com.github.collinalpert.java2db.annotations.ColumnName;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.utilities.IoC;
@@ -12,7 +13,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
@@ -63,7 +63,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 */
 	@Override
 	public List<T> mapToList(ResultSet set) throws SQLException {
-		var list = new ArrayList<T>();
+		var list = new LinkedList<T>();
 		while (set.next()) {
 			var entity = IoC.resolve(clazz);
 			setFields(set, entity);
@@ -115,24 +115,46 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 	 */
 	private <E extends BaseEntity> void setFields(ResultSet set, E entity, String identifier) throws SQLException {
 		var fields = Utilities.getEntityFields(entity.getClass(), true);
-		var tableName = Utilities.getTableName(entity.getClass());
-		var foreignKeyFields = new LinkedList<Field>();
 		for (Field field : fields) {
 			field.setAccessible(true);
 			try {
 				if (field.getAnnotation(ForeignKeyEntity.class) != null) {
+					var foreignKeyColumnName = field.getAnnotation(ForeignKeyEntity.class).value();
 					if (!BaseEntity.class.isAssignableFrom(field.getType())) {
 						throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
 					}
 
-					foreignKeyFields.add(field);
+					String foreignKeyName = "";
+					try {
+						var foreignKeyField = field.getDeclaringClass().getDeclaredField(foreignKeyColumnName);
+						foreignKeyName = foreignKeyField.getName();
+						if (foreignKeyField.getAnnotation(ColumnName.class) != null) {
+							foreignKeyName = foreignKeyField.getAnnotation(ColumnName.class).value();
+						}
+					} catch (NoSuchFieldException e) {
+						//Oh boi, you've done it now!
+						for (Field declaredField : field.getDeclaringClass().getDeclaredFields()) {
+							if (declaredField.getAnnotation(ColumnName.class) != null && declaredField.getAnnotation(ColumnName.class).value().equals(foreignKeyColumnName)) {
+								foreignKeyName = declaredField.getAnnotation(ColumnName.class).value();
+								break;
+							}
+						}
+					}
+
+					if (set.getObject((identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + foreignKeyName) == null) {
+						continue;
+					}
+
+					@SuppressWarnings("unchecked")
 					var foreignKeyObject = IoC.resolve((Class<? extends BaseEntity>) field.getType());
 					setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
 					field.set(entity, foreignKeyObject);
 					continue;
 				}
 
-				var columnLabel = (identifier == null ? tableName : identifier) + "_" + field.getName();
+				var columnName = field.getAnnotation(ColumnName.class) != null ? field.getAnnotation(ColumnName.class).value() : field.getName();
+				var columnLabel = (identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + columnName;
+
 				Object value;
 				if (field.getType() == LocalDateTime.class) {
 					value = set.getTimestamp(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDateTime();
@@ -153,32 +175,5 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 				e.printStackTrace();
 			}
 		}
-
-		validateEntityForNull(entity, foreignKeyFields);
-	}
-
-	/**
-	 * Sets all foreign key entities to {@code null} where the foreign key is also null, since this cannot be prevented while filling the entity.
-	 *
-	 * @param entity           The entity to be validated.
-	 * @param foreignKeyFields The existing foreign key fields in this entity to be checked.
-	 * @param <E>              The type of the entity.
-	 */
-	private <E extends BaseEntity> void validateEntityForNull(E entity, List<Field> foreignKeyFields) {
-		foreignKeyFields.forEach(field -> {
-			var foreignKeyText = field.getAnnotation(ForeignKeyEntity.class).value();
-			try {
-				field.setAccessible(true);
-				var foreignKeyField = entity.getClass().getDeclaredField(foreignKeyText);
-				foreignKeyField.setAccessible(true);
-				var value = foreignKeyField.get(entity);
-				if (value == null) {
-					field.set(entity, null);
-				}
-
-			} catch (NoSuchFieldException | IllegalAccessException e) {
-				e.printStackTrace();
-			}
-		});
 	}
 }

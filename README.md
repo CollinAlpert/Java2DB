@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>3.1</version>
+    <version>4.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -32,7 +32,7 @@ Lets say we have a database with two tables that have the following structure:
 &nbsp;&nbsp;&nbsp;&nbsp;`id`\
 &nbsp;&nbsp;&nbsp;&nbsp;`code`\
 &nbsp;&nbsp;&nbsp;&nbsp;`description`\
-&nbsp;&nbsp;&nbsp;&nbsp;`isBinary`\
+&nbsp;&nbsp;&nbsp;&nbsp;`isBinary`
 
 `person`\
 &nbsp;&nbsp;&nbsp;&nbsp;`id`\
@@ -100,7 +100,7 @@ public class PersonService extends BaseService<Person> {
 Every service *must* extend `BaseService`.
 
 That's it! Now we can get data from the database using the services using simple methods like `getById` and so on.\
-As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.\ 
+As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.\
 These two methods can only used by custom methods in the service classes and not by a service directly. This is to preserve good programming practice and forces you to create descriptive methods for any specific data you might be getting.\
 An important thing to remember when working with Strings in predicates in the Java2DB context is that Strings are compared using the `==` equality comparison. The reason for this is that the lambda is converted to SQL and not checked for actual equality in Java, but rather in SQL.
 
@@ -125,9 +125,31 @@ If you would like to check if a certain record exists in a table, you can use th
 Using the above [example](#example), the usages would look something like this: `personService.any(person -> person.getName() == "Steve")`.\
 You can also check if a table has at least one row by calling `personService.any()`.
 
+### Column name deviations
+To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.
+Note that when supplying a different name for a foreign key, the `@ForeignKeyEntity` annotation must still point to the name of the actual table's foreign key column. Here's an example in which the gender foreign key is not suffixed with "id" on the database: 
+```java
+@TableName("person")
+public class Person extends BaseEntity {
+	
+	private String name;
+	private int age;
+	
+	//The "gender" field corresponds to the table column "genderId" on the database.
+	@ColumnName("genderId")
+	private long gender;
+	
+	//The foreign key entity still refers to the actual column name.
+	@ForeignKeyEntity("genderId")
+	private Gender genderObject;
+	
+	// Getters and setters...
+}
+```
+
 ### Query constraints
 Java2DB offers full support for default query constraints.\
-This means you can tell Java2DB to execute a certain WHERE condition on *every* query that is executed on a specific table.\
+This means you can tell Java2DB to execute a certain WHERE condition with *every* query that is executed on a specific table.\
 Here's an example: Say every query executed on the `person` table should only return people of age 18 and older and with an id greater than 0 (just because). This can be achieved adding query constraints using the `QueryConstraints` class.\
 In our case, this would look something like this:
 
@@ -150,6 +172,10 @@ In case you are interested in pagination, Java2DB also offers support for that. 
 To receive a `PaginationResult`, use one of the `createPagination` methods from the `BaseService`. The result will allow you to get a certain page. The database query will only be executed when you request a page, in order to minimize data transfer of data that might not be needed. It would be unnecessary to load all of the pages if only the first one will be viewed by the user.\
 You also have option to add caching to the pagination. To do this, simply add a cache expiry duration to the `createPagination` method and you will receive a `CacheablePaginationResult`. When getting pages which you have previously requested, they will be loaded from the cache, which can significantly reduce loading times. This will only happen as long as the expiry duration is not over yet. After that, the page will be re-loaded from the database and loaded into the cache.\
 You also have the option to invalidate/clear the caches and trigger a fresh reload the next time a page is requested.
+
+### Executing plain SQL
+If you still feel the need that you need to perform plain SQL queries, maybe because one of your queries is more complex or because this library is missing a feature (in which case, please let me know), this is still possible.
+Using the `DBConnection` class, you can execute SQL queries and receive a `ResultSet` which you can then work with. It spares you the hassle of manually creating a connection and preparing statements etc. Here's a basic example:
 
 ### Miscellaneous 
 - If you would not like your queries logged in the console, use the `DBConnection.LOG_QUERIES = false;` statement on program start.
