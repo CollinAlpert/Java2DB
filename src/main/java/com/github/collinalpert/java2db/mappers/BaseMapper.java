@@ -117,59 +117,66 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 		var fields = Utilities.getEntityFields(entity.getClass(), true);
 		for (Field field : fields) {
 			field.setAccessible(true);
-			try {
-				if (field.getAnnotation(ForeignKeyEntity.class) != null) {
-					var foreignKeyColumnName = field.getAnnotation(ForeignKeyEntity.class).value();
-					if (!BaseEntity.class.isAssignableFrom(field.getType())) {
-						throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
-					}
+			if (field.getAnnotation(ForeignKeyEntity.class) != null) {
+				var foreignKeyColumnName = field.getAnnotation(ForeignKeyEntity.class).value();
+				if (!BaseEntity.class.isAssignableFrom(field.getType())) {
+					throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
+				}
 
-					String foreignKeyName = "";
-					try {
-						var foreignKeyField = field.getDeclaringClass().getDeclaredField(foreignKeyColumnName);
-						foreignKeyName = foreignKeyField.getName();
-						if (foreignKeyField.getAnnotation(ColumnName.class) != null) {
-							foreignKeyName = foreignKeyField.getAnnotation(ColumnName.class).value();
+				// This block is for checking if the foreign key is null.
+				// That means that the corresponding foreign key entity must be set to null.
+				String foreignKeyName = "";
+				try {
+					var foreignKeyField = field.getDeclaringClass().getDeclaredField(foreignKeyColumnName);
+					foreignKeyName = foreignKeyField.getName();
+					if (foreignKeyField.getAnnotation(ColumnName.class) != null) {
+						foreignKeyName = foreignKeyField.getAnnotation(ColumnName.class).value();
+					}
+				} catch (NoSuchFieldException e) {
+					//Oh boi, you've done it now!
+					for (Field declaredField : field.getDeclaringClass().getDeclaredFields()) {
+						if (declaredField.getAnnotation(ColumnName.class) != null && declaredField.getAnnotation(ColumnName.class).value().equals(foreignKeyColumnName)) {
+							foreignKeyName = declaredField.getAnnotation(ColumnName.class).value();
+							break;
 						}
-					} catch (NoSuchFieldException e) {
-						//Oh boi, you've done it now!
-						for (Field declaredField : field.getDeclaringClass().getDeclaredFields()) {
-							if (declaredField.getAnnotation(ColumnName.class) != null && declaredField.getAnnotation(ColumnName.class).value().equals(foreignKeyColumnName)) {
-								foreignKeyName = declaredField.getAnnotation(ColumnName.class).value();
-								break;
-							}
-						}
 					}
+				}
 
-					if (set.getObject((identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + foreignKeyName) == null) {
-						continue;
-					}
+				if (set.getObject((identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + foreignKeyName) == null) {
+					continue;
+				}
 
-					@SuppressWarnings("unchecked")
-					var foreignKeyObject = IoC.resolve((Class<? extends BaseEntity>) field.getType());
-					setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
+				@SuppressWarnings("unchecked")
+				var foreignKeyObject = IoC.resolve((Class<? extends BaseEntity>) field.getType());
+				setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
+				try {
 					field.set(entity, foreignKeyObject);
-					continue;
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
 				}
 
-				var columnName = field.getAnnotation(ColumnName.class) != null ? field.getAnnotation(ColumnName.class).value() : field.getName();
-				var columnLabel = (identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + columnName;
+				continue;
+			}
 
-				Object value;
-				if (field.getType() == LocalDateTime.class) {
-					value = set.getTimestamp(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDateTime();
-				} else if (field.getType() == LocalDate.class) {
-					value = set.getDate(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDate();
-				} else if (field.getType() == LocalTime.class) {
-					value = set.getTime(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalTime();
-				} else {
-					value = set.getObject(columnLabel);
-				}
+			var columnName = field.getAnnotation(ColumnName.class) != null ? field.getAnnotation(ColumnName.class).value() : field.getName();
+			var columnLabel = (identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + columnName;
 
-				if (value == null) {
-					continue;
-				}
+			Object value;
+			if (field.getType() == LocalDateTime.class) {
+				value = set.getTimestamp(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDateTime();
+			} else if (field.getType() == LocalDate.class) {
+				value = set.getDate(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDate();
+			} else if (field.getType() == LocalTime.class) {
+				value = set.getTime(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalTime();
+			} else {
+				value = set.getObject(columnLabel);
+			}
 
+			if (value == null) {
+				continue;
+			}
+
+			try {
 				field.set(entity, value);
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
