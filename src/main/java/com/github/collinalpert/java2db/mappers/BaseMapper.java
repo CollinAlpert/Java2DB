@@ -158,7 +158,7 @@ public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
 				continue;
 			}
 
-			var columnName = field.getAnnotation(ColumnName.class) != null ? field.getAnnotation(ColumnName.class).value() : field.getName();
+			var columnName = Utilities.getColumnName(field);
 			var columnLabel = (identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + columnName;
 
 			Object value;

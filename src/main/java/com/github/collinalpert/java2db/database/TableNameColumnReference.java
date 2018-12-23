@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.database;
 
-import com.github.collinalpert.java2db.annotations.ColumnName;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
+import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 
@@ -53,19 +53,15 @@ public class TableNameColumnReference {
 	}
 
 	public String getSQLNotation() {
-		return String.format("`%s`.%s", getIdentifier(), getColumnName());
+		return String.format("`%s`.%s", getIdentifier(), Utilities.getColumnName(column));
 	}
 
 	public String getAliasNotation() {
-		return getIdentifier() + "_" + getColumnName();
+		return getIdentifier() + "_" + Utilities.getColumnName(column);
 	}
 
 	public boolean isForeignKey() {
 		return column.getAnnotation(ForeignKeyEntity.class) != null;
-	}
-
-	private String getColumnName() {
-		return column.getAnnotation(ColumnName.class) != null ? column.getAnnotation(ColumnName.class).value() : column.getName();
 	}
 
 	public String getIdentifier() {

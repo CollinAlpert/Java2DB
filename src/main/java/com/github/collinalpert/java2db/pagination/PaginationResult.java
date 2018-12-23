@@ -1,7 +1,9 @@
 package com.github.collinalpert.java2db.pagination;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.Query;
+import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -14,6 +16,8 @@ import java.util.stream.Stream;
 public class PaginationResult<T extends BaseEntity> {
 
 	protected final List<Query<T>> queries;
+	private SqlFunction<T, ?> orderFunction;
+	private OrderTypes orderType;
 
 	public PaginationResult(List<Query<T>> queries) {
 		this.queries = queries;
@@ -51,7 +55,7 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public List<T> getPage(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).toList();
+		return queries.get(number - 1).orderBy(this.orderFunction, this.orderType).toList();
 	}
 
 	/**
@@ -62,6 +66,31 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public Stream<T> getPageAsStream(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).toStream();
+		return queries.get(number - 1).orderBy(this.orderFunction, this.orderType).toStream();
+	}
+
+	/**
+	 * An overload of the {@link #orderBy(SqlFunction, OrderTypes)} method. Will order in an ascending fashion.
+	 *
+	 * @param orderFunction The function to order by.
+	 * @return This object with the added ordering feature.
+	 * @see #orderBy(SqlFunction, OrderTypes)
+	 */
+	public PaginationResult<T> orderBy(SqlFunction<T, ?> orderFunction) {
+		return orderBy(orderFunction, OrderTypes.ASCENDING);
+	}
+
+	/**
+	 * Adds an ORDER BY statement to the queries executed for the pages.
+	 * Note that this will order the entire pagination structure and not every page separately.
+	 *
+	 * @param orderFunction The function to order by.
+	 * @param orderType     The direction of order.
+	 * @return This object with the added ordering feature.
+	 */
+	public PaginationResult<T> orderBy(SqlFunction<T, ?> orderFunction, OrderTypes orderType) {
+		this.orderFunction = orderFunction;
+		this.orderType = orderType;
+		return this;
 	}
 }

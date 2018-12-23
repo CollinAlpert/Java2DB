@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.utilities;
 
+import com.github.collinalpert.java2db.annotations.ColumnName;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.annotations.Ignore;
 import com.github.collinalpert.java2db.annotations.TableName;
@@ -118,5 +119,20 @@ public class Utilities {
 		}
 
 		return tableNameAnnotation.value();
+	}
+
+	/**
+	 * Gets the corresponding table column name of a field.
+	 *
+	 * @param field The field representing the column in a table.
+	 * @return The column name in the table.
+	 */
+	public static String getColumnName(Field field) {
+		ColumnName columnName;
+		if ((columnName = field.getAnnotation(ColumnName.class)) != null) {
+			return columnName.value();
+		}
+
+		return field.getName();
 	}
 }

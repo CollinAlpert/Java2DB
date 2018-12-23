@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>4.0</version>
+    <version>4.0.1</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -171,7 +171,8 @@ Of course, nothing prevents you from concatenating the predicates to something l
 In case you are interested in pagination, Java2DB also offers support for that. Since I am assuming you already know what pagination is, when reading this section, I will not explain it.\
 To receive a `PaginationResult`, use one of the `createPagination` methods from the `BaseService`. The result will allow you to get a certain page. The database query will only be executed when you request a page, in order to minimize data transfer of data that might not be needed. It would be unnecessary to load all of the pages if only the first one will be viewed by the user.\
 You also have option to add caching to the pagination. To do this, simply add a cache expiry duration to the `createPagination` method and you will receive a `CacheablePaginationResult`. When getting pages which you have previously requested, they will be loaded from the cache, which can significantly reduce loading times. This will only happen as long as the expiry duration is not over yet. After that, the page will be re-loaded from the database and loaded into the cache.\
-You also have the option to invalidate/clear the caches and trigger a fresh reload the next time a page is requested.
+You also have the option to invalidate/clear the caches and trigger a fresh reload the next time a page is requested.\
+In case you want to add an ORDER BY statement to your pagination queries, you can do this on the `PaginationResult`. This will effect the pages in an overlapping manner and not just each page separately. 
 
 ### Executing plain SQL
 If you still feel the need that you need to perform plain SQL queries, maybe because one of your queries is more complex or because this library is missing a feature (in which case, please let me know), this is still possible.

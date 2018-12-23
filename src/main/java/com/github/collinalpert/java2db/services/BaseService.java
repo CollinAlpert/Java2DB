@@ -149,6 +149,7 @@ public class BaseService<T extends BaseEntity> {
 			Utilities.logf("%s entities were successfully created.", this.type.getSimpleName());
 		}
 	}
+
 	//endregion
 
 	//region Read
@@ -410,7 +411,7 @@ public class BaseService<T extends BaseEntity> {
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			try {
-				fieldJoiner.add(String.format("`%s` = %s", field.getName(), convertObject(field.get(instance))));
+				fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), convertObject(field.get(instance))));
 			} catch (IllegalAccessException e) {
 				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), this.type.getSimpleName());
 			}
@@ -486,12 +487,14 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * Truncates the corresponding table on the database.
 	 *
-	 * @throws SQLException for example if a foreign key references a row in this table.
+	 * @throws SQLException for example because a foreign key references this table. Note that you will not be able to
+	 *                      truncate a table, even if no foreign key references a row in this table. TRUNCATE is a DDL
+	 *                      command and cannot check if rows are being referenced or not.
 	 */
 	public void truncateTable() throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("truncate table %s;", this.tableName));
-			Utilities.logf("Table %s successfully truncated.", this.tableName);
+			Utilities.logf("Table %s was successfully truncated.", this.tableName);
 		}
 	}
 
@@ -505,6 +508,32 @@ public class BaseService<T extends BaseEntity> {
 	@SuppressWarnings("unchecked")
 	private Class<T> getGenericType() {
 		return ((Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);
+	}
+
+	/**
+	 * Will create a {@link StringBuilder} containing the beginning of a DML INSERT statement.
+	 *
+	 * @return An INSERT statement up to the VALUES keyword.
+	 */
+	private StringBuilder createInsertHeader() {
+		return new StringBuilder("insert into ").append(this.tableName).append(Utilities.getEntityFields(this.type)
+				.stream().map(field -> String.format("`%s`", Utilities.getColumnName(field)))
+				.collect(Collectors.joining(", ", " (", ")"))).append(" values ");
+	}
+
+	/**
+	 * Returns a field value from ab entity in its SQL equivalent.
+	 *
+	 * @param entityField    The value's field.
+	 * @param entityInstance The entity containing the value
+	 * @return A {@code String} representing the SQL value of the entity field.
+	 */
+	private String getSQLValue(Field entityField, T entityInstance) {
+		try {
+			return convertObject(entityField.get(entityInstance));
+		} catch (IllegalAccessException e) {
+			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
+		}
 	}
 
 	/**
@@ -543,33 +572,6 @@ public class BaseService<T extends BaseEntity> {
 		}
 
 		return value.toString();
-	}
-
-	/**
-	 * Will create a {@link StringBuilder} containing the beginning of a DML INSERT statement.
-	 *
-	 * @return An INSERT statement up to the VALUES keyword.
-	 */
-	private StringBuilder createInsertHeader() {
-		var insertQuery = new StringBuilder("insert into ").append(this.tableName).append(" (");
-		var databaseFields = Utilities.getEntityFields(this.type).stream().map(field -> String.format("`%s`", field.getName())).collect(Collectors.joining(", "));
-		insertQuery.append(databaseFields).append(") values ");
-		return insertQuery;
-	}
-
-	/**
-	 * Returns a field value from ab entity in its SQL equivalent.
-	 *
-	 * @param entityField    The value's field.
-	 * @param entityInstance The entity containing the value
-	 * @return A {@code String} representing the SQL value of the entity field.
-	 */
-	private String getSQLValue(Field entityField, T entityInstance) {
-		try {
-			return convertObject(entityField.get(entityInstance));
-		} catch (IllegalAccessException e) {
-			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
-		}
 	}
 
 	/**
