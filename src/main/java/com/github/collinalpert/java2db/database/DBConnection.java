@@ -124,13 +124,7 @@ public class DBConnection implements Closeable {
 		var statement = connection.createStatement();
 		Utilities.log(query);
 		statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
-		statement.closeOnCompletion();
-		var set = statement.getGeneratedKeys();
-		if (set.next()) {
-			return set.getLong(1);
-		}
-
-		return -1;
+		return updateHelper(statement);
 	}
 
 	/**
@@ -149,6 +143,10 @@ public class DBConnection implements Closeable {
 
 		Utilities.log(query);
 		statement.executeUpdate();
+		return updateHelper(statement);
+	}
+
+	private long updateHelper(Statement statement) throws SQLException {
 		statement.closeOnCompletion();
 		var set = statement.getGeneratedKeys();
 		if (set.next()) {

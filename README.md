@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>3.0.1</version>
+    <version>3.1.1</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -176,7 +176,15 @@ In case you want to add an ORDER BY statement to your pagination queries, you ca
 
 ### Executing plain SQL
 If you still feel the need that you need to perform plain SQL queries, maybe because one of your queries is more complex or because this library is missing a feature (in which case, please let me know), this is still possible.
-Using the `DBConnection` class, you can execute SQL queries and receive a `ResultSet` which you can then work with. It spares you the hassle of manually creating a connection and preparing statements etc. Here's a basic example:
+Using the `DBConnection` class, you can execute SQL queries and also receive a `ResultSet` which you can then work with. It spares you the hassle of manually creating a connection and preparing statements etc. Here's a basic example that executes a DML statement:
+
+```jshelllanguage
+try (var connection = new DBConnection()) {
+    connection.update(Files.lines(Paths.get("path/to/file.sql")).collect(Collectors.joining("\n")));
+}
+```
+
+If you are trying to retrieve execute a more complex DQL statement and want a `ResultSet`, you can use the `execute` method from the `DBConnection` class.
 
 ### Miscellaneous 
 - If you would not like your queries logged in the console, use the `DBConnection.LOG_QUERIES = false;` statement on program start.

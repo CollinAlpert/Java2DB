@@ -410,11 +410,7 @@ public class BaseService<T extends BaseEntity> {
 		var fieldJoiner = new StringJoiner(", ");
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			try {
-				fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), convertObject(field.get(instance))));
-			} catch (IllegalAccessException e) {
-				System.err.printf("Error getting value for field %s from type %s\n", field.getName(), this.type.getSimpleName());
-			}
+			fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), getSQLValue(field, instance)));
 		});
 
 		updateQuery.append(fieldJoiner.toString()).append(" where id = ").append(instance.getId());
@@ -468,6 +464,56 @@ public class BaseService<T extends BaseEntity> {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from %s where %s.id = ?;", this.tableName, this.tableName), id);
 			Utilities.logf("%s with id %s successfully deleted!", this.type.getSimpleName(), id);
+		}
+	}
+
+	/**
+	 * Deletes a list of entities at once.
+	 *
+	 * @param entities The list of entities to delete.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
+	public void delete(List<T> entities) throws SQLException {
+		try (var connection = new DBConnection()) {
+			var joiner = new StringJoiner(", ", "(", ")");
+			for (T entity : entities) {
+				joiner.add(Long.toString(entity.getId()));
+			}
+
+			var joinedIds = joiner.toString();
+			connection.update(String.format("delete from %s where %s.id in %s", this.tableName, this.tableName, joinedIds));
+			Utilities.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
+		}
+	}
+
+	/**
+	 * Deletes multiple entities at once.
+	 *
+	 * @param entities A variable amount of entities.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 * @see #delete(List)
+	 */
+	@SafeVarargs
+	public final void delete(T... entities) throws SQLException {
+		delete(Arrays.asList(entities));
+	}
+
+	/**
+	 * Deletes multiple rows with the corresponding ids.
+	 *
+	 * @param ids The ids to delete the rows by.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
+	public void delete(long... ids) throws SQLException {
+		try (var connection = new DBConnection()) {
+			var joiner = new StringJoiner(", ", "(", ")");
+			for (long id : ids) {
+				joiner.add(Long.toString(id));
+			}
+
+			var joinedIds = joiner.toString();
+			connection.update(String.format("delete from %s where %s.id in %s", this.tableName, this.tableName, joinedIds));
+			Utilities.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
