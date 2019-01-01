@@ -301,7 +301,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
 	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType) {
-		return createQuery().orderBy(orderBy, sortingType).toList();
+		return createQuery().orderBy(sortingType, orderBy).toList();
 	}
 
 	/**
@@ -324,7 +324,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list with the maximum size of the parameter specified and in an ascending order.
 	 */
 	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType, int limit) {
-		return createQuery().orderBy(orderBy, sortingType).limit(limit).toList();
+		return createQuery().orderBy(sortingType, orderBy).limit(limit).toList();
 	}
 
 	//endregion Query

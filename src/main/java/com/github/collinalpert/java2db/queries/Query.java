@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.stream.Stream;
 
 /**
@@ -30,7 +31,7 @@ public class Query<T extends BaseEntity> {
 	private final Mapper<T> mapper;
 
 	private SqlPredicate<T> whereClause;
-	private SqlFunction<T, ?> orderBy;
+	private SqlFunction<T, ?>[] orderBy;
 	private OrderTypes orderType;
 	private Integer limit;
 	private int limitOffset;
@@ -118,9 +119,12 @@ public class Query<T extends BaseEntity> {
 	 *
 	 * @param function The property to order by.
 	 * @return This {@link Query} object, now with an ORDER BY clause.
+	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
+	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
 	 */
+	@Deprecated(since = "3.1.2", forRemoval = true)
 	public Query<T> orderBy(SqlFunction<T, ?> function) {
-		return orderBy(function, OrderTypes.ASCENDING);
+		return orderBy(OrderTypes.ASCENDING, function);
 	}
 
 	/**
@@ -129,9 +133,35 @@ public class Query<T extends BaseEntity> {
 	 * @param function The property to order by.
 	 * @param type     The type of ordering that should be applied.
 	 * @return This {@link Query} object, now with an ORDER BY clause.
+	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
+	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
 	 */
+	@Deprecated(since = "3.1.2", forRemoval = true)
 	public Query<T> orderBy(SqlFunction<T, ?> function, OrderTypes type) {
-		this.orderBy = function;
+		return orderBy(type, function);
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link Query} object, now with a coalesced ORDER BY clause.
+	 */
+	@SafeVarargs
+	public final Query<T> orderBy(SqlFunction<T, ?>... functions) {
+		return orderBy(OrderTypes.ASCENDING, functions);
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param type      The type of ordering that should be applied.
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link Query} object, now with a coalesced ORDER BY clause.
+	 */
+	@SafeVarargs
+	public final Query<T> orderBy(OrderTypes type, SqlFunction<T, ?>... functions) {
+		this.orderBy = functions;
 		this.orderType = type;
 		return this;
 	}
@@ -199,15 +229,25 @@ public class Query<T extends BaseEntity> {
 		}
 
 		builder.append(" where ").append(Lambda2Sql.toSql(clauseCopy, tableName));
-		if (orderBy != null) {
-			builder.append(" order by ")
-					.append(Lambda2Sql.toSql(this.orderBy, tableName))
-					.append(" ")
-					.append(this.orderType.getSql());
+		if (this.orderBy != null && this.orderBy.length > 0) {
+			builder.append(" order by ");
+
+			if (this.orderBy.length == 1) {
+				builder.append(Lambda2Sql.toSql(this.orderBy[0], tableName));
+			} else {
+				var joiner = new StringJoiner(", ", "coalesce(", ")");
+				for (SqlFunction<T, ?> orderByFunction : this.orderBy) {
+					joiner.add(Lambda2Sql.toSql(orderByFunction, tableName));
+				}
+
+				builder.append(joiner.toString());
+			}
+
+			builder.append(" ").append(this.orderType.getSql());
 		}
 
 		if (this.limit != null) {
-			builder.append(" limit ").append(this.limitOffset).append(",").append(this.limit);
+			builder.append(" limit ").append(this.limitOffset).append(", ").append(this.limit);
 		}
 
 		return builder.toString();

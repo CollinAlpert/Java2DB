@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 public class PaginationResult<T extends BaseEntity> {
 
 	protected final List<Query<T>> queries;
-	private SqlFunction<T, ?> orderFunction;
+	private SqlFunction<T, ?>[] orderFunctions;
 	private OrderTypes orderType;
 
 	public PaginationResult(List<Query<T>> queries) {
@@ -55,7 +55,7 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public List<T> getPage(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).orderBy(this.orderFunction, this.orderType).toList();
+		return queries.get(number - 1).orderBy(this.orderType, this.orderFunctions).toList();
 	}
 
 	/**
@@ -66,18 +66,21 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public Stream<T> getPageAsStream(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).orderBy(this.orderFunction, this.orderType).toStream();
+		return queries.get(number - 1).orderBy(this.orderType, this.orderFunctions).toStream();
 	}
 
 	/**
-	 * An overload of the {@link #orderBy(SqlFunction, OrderTypes)} method. Will order in an ascending fashion.
+	 * An overload of the {@link #orderBy(OrderTypes, SqlFunction...)} method. Will order in an ascending fashion.
 	 *
 	 * @param orderFunction The function to order by.
 	 * @return This object with the added ordering feature.
-	 * @see #orderBy(SqlFunction, OrderTypes)
+	 * @see #orderBy(OrderTypes, SqlFunction...)
+	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
+	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
 	 */
+	@Deprecated(since = "3.1.2", forRemoval = true)
 	public PaginationResult<T> orderBy(SqlFunction<T, ?> orderFunction) {
-		return orderBy(orderFunction, OrderTypes.ASCENDING);
+		return orderBy(OrderTypes.ASCENDING, orderFunction);
 	}
 
 	/**
@@ -87,9 +90,37 @@ public class PaginationResult<T extends BaseEntity> {
 	 * @param orderFunction The function to order by.
 	 * @param orderType     The direction of order.
 	 * @return This object with the added ordering feature.
+	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
+	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
 	 */
+	@Deprecated(since = "3.1.2", forRemoval = true)
 	public PaginationResult<T> orderBy(SqlFunction<T, ?> orderFunction, OrderTypes orderType) {
-		this.orderFunction = orderFunction;
+		return orderBy(orderType, orderFunction);
+	}
+
+	/**
+	 * Adds ascending ORDER BY statements to the queries executed for the pages in a coalescing manner.
+	 * Note that this will order the entire pagination structure and not every page separately.
+	 *
+	 * @param orderFunctions The columns to order by.
+	 * @return The object with an ORDER BY statement
+	 */
+	@SafeVarargs
+	public final PaginationResult<T> orderBy(SqlFunction<T, ?>... orderFunctions) {
+		return orderBy(OrderTypes.ASCENDING, orderFunctions);
+	}
+
+	/**
+	 * Adds ORDER BY statements to the queries executed for the pages in a coalescing manner.
+	 * Note that this will order the entire pagination structure and not every page separately.
+	 *
+	 * @param orderType      The direction of order.
+	 * @param orderFunctions The columns to order by.
+	 * @return The object with an ORDER BY statement
+	 */
+	@SafeVarargs
+	public final PaginationResult<T> orderBy(OrderTypes orderType, SqlFunction<T, ?>... orderFunctions) {
+		this.orderFunctions = orderFunctions;
 		this.orderType = orderType;
 		return this;
 	}

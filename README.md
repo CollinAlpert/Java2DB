@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>3.1.1</version>
+    <version>3.1.2</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -110,7 +110,7 @@ The last thing you need to do is give Java2DB access to your database. Set the s
 
 ### Querying data
 The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList` or the `toStream` methods. You should only need this approach seldomly.\
-Much rather, use the `getMultiple` method. It also returns a `Query` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `Query` version, WHERE, LIMIT and ORDER BY are supported. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
+Much rather, use the `getMultiple` method. It also returns a `Query` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `Query` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
 As previously mentioned, to execute the query and retrieve a result, use the `toList` or `toStream` methods.
 
 ### LIKE operations
