@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>3.1.2</version>
+    <version>3.2</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -102,7 +102,6 @@ Every service *must* extend `BaseService`.
 That's it! Now we can get data from the database using the services using simple methods like `getById` and so on.\
 As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.\
 These two methods can only used by custom methods in the service classes and not by a service directly. This is to preserve good programming practice and forces you to create descriptive methods for any specific data you might be getting.\
-An important thing to remember when working with Strings in predicates in the Java2DB context is that Strings are compared using the `==` equality comparison. The reason for this is that the lambda is converted to SQL and not checked for actual equality in Java, but rather in SQL.
 
 The last thing you need to do is give Java2DB access to your database. Set the static variables `HOST`, `DATABASE`, `USERNAME`, `PASSWORD` and optionally `PORT` of the `DBConnection` class to achieve possibility of connection.
 
@@ -115,7 +114,7 @@ As previously mentioned, to execute the query and retrieve a result, use the `to
 
 ### LIKE operations
 It is also possible to achieve `LIKE` operations using the String `startsWith`, `endsWith` and `contains` methods in a predicate. This, in the context of the `PersonService` from the [example](#example), would look something like this:\
-`getMultiple(p -> person.getName().startsWith("A"));`. The generated WHERE clause would be ``where `person`.name LIKE 'A%'``. Please do *not* use the String `equals` method to compare String values. As previously mentioned, in the context of predicates in Java2DB, use the `==` operator.
+`getMultiple(p -> person.getName().startsWith("A"));`. The generated WHERE clause would be ``where `person`.name LIKE 'A%'``. Please do *not* use the String `equals` method to compare String values.
 
 ### Counting
 For counting functionality, the `BaseService` provides a `count` method. You can use it to either count all rows in a table, or to count all rows which match a certain condition. E.g. `personService.count()` would return the total number of people while `personService.count(person -> person.getAge() >= 50)` would return the amount of people that are of age 50 and older in your table.
@@ -124,6 +123,9 @@ For counting functionality, the `BaseService` provides a `count` method. You can
 If you would like to check if a certain record exists in a table, you can use the `any` method provided by the `BaseService`.\
 Using the above [example](#example), the usages would look something like this: `personService.any(person -> person.getName() == "Steve")`.\
 You can also check if a table has at least one row by calling `personService.any()`.
+
+### Duplicate value checking
+To check if a column's values are unique in a table, use the `hasDuplicates` method provided by the `BaseService`. It will return `true` if there is at least one duplicate value and false if all the values are unique.
 
 ### Column name deviations
 To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.
@@ -159,7 +161,7 @@ public class Main {
 	    // register the services and all that
 	    QueryConstraints.addConstraint(Person.class, person -> person.getAge() >= 18);
 	    QueryConstraints.addConstraint(Person.class, person -> person.getId() >= 0);
-	    // Now, every query executed to the person table will contain these conditions.
+	    // Now, every DQL query executed to the person table will contain these conditions.
 	}
 }
 ```

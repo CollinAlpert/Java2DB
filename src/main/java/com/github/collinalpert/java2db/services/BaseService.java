@@ -106,11 +106,11 @@ public class BaseService<T extends BaseEntity> {
 	 * @param instances The instances to create.
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
-	 * @see #createMultiple(List)
+	 * @see #create(List)
 	 */
 	@SafeVarargs
-	public final void createMultiple(T... instances) throws SQLException {
-		createMultiple(Arrays.asList(instances));
+	public final void create(T... instances) throws SQLException {
+		create(Arrays.asList(instances));
 	}
 
 	/**
@@ -122,7 +122,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 */
-	public void createMultiple(List<T> instances) throws SQLException {
+	public void create(List<T> instances) throws SQLException {
 		if (instances.isEmpty()) {
 			return;
 		}
@@ -218,6 +218,28 @@ public class BaseService<T extends BaseEntity> {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			throw new IllegalArgumentException(String.format("Could not check if a row matches this condition on table %s.", this.tableName));
+		}
+	}
+
+	//endregion
+
+	//region HasDuplicates
+
+	/**
+	 * Checks if duplicate values exist for a specific column in a table.
+	 *
+	 * @param column The column to check for duplicate values for.
+	 * @return {@code True} if there is at least one duplicate value in the specified column, {@code false} otherwise.
+	 */
+	public boolean hasDuplicates(SqlFunction<T, ?> column) {
+		var sqlColumn = Lambda2Sql.toSql(column, this.tableName);
+		try (var connection = new DBConnection()) {
+			try (var result = connection.execute(String.format("select %s from %s group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn))) {
+				return result.next();
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new IllegalArgumentException(String.format("Could not check if duplicate values exist in column %s on table %s.", sqlColumn, this.tableName));
 		}
 	}
 
@@ -451,7 +473,8 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(T instance) throws SQLException {
-		delete(instance.getId());
+		var id = instance.getId();
+		delete(x -> x.getId() == id);
 	}
 
 	/**
@@ -461,10 +484,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(long id) throws SQLException {
-		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from %s where %s.id = ?;", this.tableName, this.tableName), id);
-			Utilities.logf("%s with id %s successfully deleted!", this.type.getSimpleName(), id);
-		}
+		delete(x -> x.getId() == id);
 	}
 
 	/**
@@ -505,16 +525,12 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(long... ids) throws SQLException {
-		try (var connection = new DBConnection()) {
-			var joiner = new StringJoiner(", ", "(", ")");
-			for (long id : ids) {
-				joiner.add(Long.toString(id));
-			}
-
-			var joinedIds = joiner.toString();
-			connection.update(String.format("delete from %s where %s.id in %s", this.tableName, this.tableName, joinedIds));
-			Utilities.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
+		var list = new ArrayList<Long>(ids.length);
+		for (long id : ids) {
+			list.add(id);
 		}
+
+		delete(x -> list.contains(x.getId()));
 	}
 
 	/**

@@ -20,7 +20,7 @@ public class QueryConstraints {
 	}
 
 	/**
-	 * Retrieves a composition {@link SqlPredicate} for all constraints that have been added for this class or any superclass of it.
+	 * Retrieves a composition {@link SqlPredicate} for all constraints that have been added for a class or any superclass of it.
 	 *
 	 * @param clazz The class to retrieve query constraints from.
 	 * @param <E>   The type of the class to get the constraints for.
