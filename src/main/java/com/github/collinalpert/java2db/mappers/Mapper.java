@@ -18,4 +18,6 @@ public interface Mapper<T extends BaseEntity> {
 	List<T> mapToList(ResultSet set) throws SQLException;
 
 	Stream<T> mapToStream(ResultSet set) throws SQLException;
+
+	T[] mapToArray(ResultSet set) throws SQLException;
 }

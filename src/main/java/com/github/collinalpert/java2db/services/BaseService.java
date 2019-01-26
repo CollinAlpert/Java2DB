@@ -249,7 +249,7 @@ public class BaseService<T extends BaseEntity> {
 
 	/**
 	 * @return a {@link Query} object with which a DQL statement can be built, using operations like order by, limit etc.
-	 * If you do not a plain {@link Query}, please consider using the
+	 * If you do not require a plain {@link Query}, please consider using the
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected Query<T> createQuery() {
@@ -258,25 +258,21 @@ public class BaseService<T extends BaseEntity> {
 
 	/**
 	 * Retrieves a single entity which matches the predicate.
-	 * It is {@code protected} as it is only meant for use in methods of the respective service.
-	 * This is to keep good programming practice and create descriptive methods for what kind of data you are getting.
 	 *
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL query.
 	 * @return An entity matching the result of the query.
 	 */
-	protected Optional<T> getSingle(SqlPredicate<T> predicate) {
+	public Optional<T> getSingle(SqlPredicate<T> predicate) {
 		return createQuery().where(predicate).getFirst();
 	}
 
 	/**
 	 * Retrieves list of entities which match the predicate.
-	 * It is {@code protected} as it is only meant for use in methods of the respective service.
-	 * This is to keep good programming practice and create descriptive methods for what kind of data you are getting.
 	 *
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL statement.
 	 * @return A list of entities matching the result of the query.
 	 */
-	protected Query<T> getMultiple(SqlPredicate<T> predicate) {
+	public Query<T> getMultiple(SqlPredicate<T> predicate) {
 		return createQuery().where(predicate);
 	}
 

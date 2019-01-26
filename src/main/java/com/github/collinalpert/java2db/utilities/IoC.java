@@ -36,7 +36,7 @@ public class IoC {
 	 * @throws IllegalArgumentException if the class cannot be constructed for any reason.
 	 *                                  This can occur if there is no public parameterless constructor available.
 	 */
-	public static <E> E resolve(Class<E> clazz) {
+	public static <E> E createInstance(Class<E> clazz) {
 		try {
 			return clazz.getDeclaredConstructor().newInstance();
 		} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {

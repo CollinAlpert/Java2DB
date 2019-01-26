@@ -11,6 +11,7 @@ import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
+import java.lang.reflect.Array;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -89,6 +90,21 @@ public class Query<T extends BaseEntity> {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Stream.empty();
+		}
+	}
+
+	/**
+	 * Executes a new query and returns the result as an array.
+	 *
+	 * @return An array of entities representing the result rows.
+	 */
+	@SuppressWarnings("unchecked")
+	public T[] toArray() {
+		try (var connection = new DBConnection()) {
+			return mapper.mapToArray(connection.execute(buildQuery()));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return (T[]) Array.newInstance(type, 0);
 		}
 	}
 

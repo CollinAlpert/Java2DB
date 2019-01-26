@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>3.2</version>
+    <version>3.3</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -101,16 +101,15 @@ Every service *must* extend `BaseService`.
 
 That's it! Now we can get data from the database using the services using simple methods like `getById` and so on.\
 As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.\
-These two methods can only used by custom methods in the service classes and not by a service directly. This is to preserve good programming practice and forces you to create descriptive methods for any specific data you might be getting.\
 
 The last thing you need to do is give Java2DB access to your database. Set the static variables `HOST`, `DATABASE`, `USERNAME`, `PASSWORD` and optionally `PORT` of the `DBConnection` class to achieve possibility of connection.
 
 ## Features
 
 ### Querying data
-The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList` or the `toStream` methods. You should only need this approach seldomly.\
+The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream` or `toArray` methods. You should only need this approach seldomly.\
 Much rather, use the `getMultiple` method. It also returns a `Query` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `Query` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
-As previously mentioned, to execute the query and retrieve a result, use the `toList` or `toStream` methods.
+As previously mentioned, to execute the query and retrieve a result, use the `toList`, `toStream` or `toArray` methods.
 
 ### LIKE operations
 It is also possible to achieve `LIKE` operations using the String `startsWith`, `endsWith` and `contains` methods in a predicate. This, in the context of the `PersonService` from the [example](#example), would look something like this:\
