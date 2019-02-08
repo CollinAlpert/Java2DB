@@ -131,33 +131,6 @@ public class Query<T extends BaseEntity> {
 	}
 
 	/**
-	 * Sets an ORDER BY clause for the DQL statement. The order will be ascending.
-	 *
-	 * @param function The property to order by.
-	 * @return This {@link Query} object, now with an ORDER BY clause.
-	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
-	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
-	 */
-	@Deprecated(since = "3.1.2", forRemoval = true)
-	public Query<T> orderBy(SqlFunction<T, ?> function) {
-		return orderBy(OrderTypes.ASCENDING, function);
-	}
-
-	/**
-	 * Sets an ORDER BY clause for the DQL statement.
-	 *
-	 * @param function The property to order by.
-	 * @param type     The type of ordering that should be applied.
-	 * @return This {@link Query} object, now with an ORDER BY clause.
-	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
-	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
-	 */
-	@Deprecated(since = "3.1.2", forRemoval = true)
-	public Query<T> orderBy(SqlFunction<T, ?> function, OrderTypes type) {
-		return orderBy(type, function);
-	}
-
-	/**
 	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
 	 *
 	 * @param functions The columns to order by in a coalescing manner.
