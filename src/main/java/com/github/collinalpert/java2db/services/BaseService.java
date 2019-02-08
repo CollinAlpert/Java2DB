@@ -50,13 +50,13 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * The generic type of this service.
 	 */
-	private final Class<T> type;
+	protected final Class<T> type;
 
 	/**
 	 * Represents the table name of the entity this services corresponds to.
 	 * It contains the table name with escaping backticks.
 	 */
-	private final String tableName;
+	protected final String tableName;
 
 	/**
 	 * The mapper used for mapping database objects to Java entities in this service.
@@ -490,14 +490,14 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	public void delete(List<T> entities) throws SQLException {
-		try (var connection = new DBConnection()) {
-			var joiner = new StringJoiner(", ", "(", ")");
-			for (T entity : entities) {
-				joiner.add(Long.toString(entity.getId()));
-			}
+		var joiner = new StringJoiner(", ", "(", ")");
+		for (T entity : entities) {
+			joiner.add(Long.toString(entity.getId()));
+		}
 
-			var joinedIds = joiner.toString();
-			connection.update(String.format("delete from %s where %s.id in %s", this.tableName, this.tableName, joinedIds));
+		var joinedIds = joiner.toString();
+		try (var connection = new DBConnection()) {
+			connection.update(String.format("delete from %s where %s.`id` in %s", this.tableName, this.tableName, joinedIds));
 			Utilities.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
@@ -509,8 +509,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 * @see #delete(List)
 	 */
-	@SafeVarargs
-	public final void delete(T... entities) throws SQLException {
+	public void delete(T... entities) throws SQLException {
 		delete(Arrays.asList(entities));
 	}
 

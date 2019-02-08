@@ -1,16 +1,18 @@
 package com.github.collinalpert.java2db.services;
 
-import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionEntity;
+import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionDeletableEntity;
 import com.github.collinalpert.java2db.queries.Query;
 
 import java.util.Optional;
 
 /**
- * Describes a service class for an entity which contains an id, a code and a description.
+ * Describes a service class for an entity which contains an id, an isDeleted flag, a code and a description.
+ * Note that when deleting entities which have an isDeleted flag with this service,
+ * they will not actually be deleted from the database, but the flag will be set to {@code true}.
  *
  * @author Collin Alpert
  */
-public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntity> extends BaseService<T> {
+public class BaseCodeAndDescriptionDeletableService<T extends BaseCodeAndDescriptionDeletableEntity> extends BaseDeletableService<T> {
 
 	/**
 	 * Retrieves an entry from a table based on its unique code.
