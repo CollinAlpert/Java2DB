@@ -64,12 +64,19 @@ public class BaseService<T extends BaseEntity> {
 	private final Mapper<T> mapper;
 
 	/**
+	 * Represents the id column being accessed.
+	 */
+	private final String idAccess;
+
+	/**
 	 * Constructor for the base class of all services. It is not possible to create instances of it.
 	 */
 	protected BaseService() {
 		this.type = getGenericType();
 		this.mapper = IoC.resolveMapperOrElse(this.type, new BaseMapper<>(this.type));
-		this.tableName = String.format("`%s`", Utilities.getTableName(this.type));
+		this.tableName = Utilities.getTableName(this.type);
+		SqlFunction<T, Long> idFunc = BaseEntity::getId;
+		this.idAccess = Lambda2Sql.toSql(idFunc, this.tableName);
 	}
 
 	//region Create
@@ -84,7 +91,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public long create(T instance) throws SQLException {
 		var insertQuery = createInsertHeader();
-		var joiner = new StringJoiner(",", "(", ");");
+		var joiner = new StringJoiner(", ", "(", ");");
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			joiner.add(getSQLValue(field, instance));
@@ -174,9 +181,9 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public long count(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select count(id) from %s where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+			try (var result = connection.execute(String.format("select count(%s) from `%s` where %s;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
-					return result.getLong("count(id)");
+					return result.getLong(String.format("count(%s)", this.idAccess));
 				}
 
 				return 0;
@@ -208,7 +215,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public boolean any(SqlPredicate<T> predicate) {
 		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select exists(select id from %s where %s limit 1) as result;", this.tableName, Lambda2Sql.toSql(predicate)))) {
+			try (var result = connection.execute(String.format("select exists(select %s from `%s` where %s limit 1) as result;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
 					return result.getInt("result") == 1;
 				}
@@ -234,7 +241,7 @@ public class BaseService<T extends BaseEntity> {
 	public boolean hasDuplicates(SqlFunction<T, ?> column) {
 		var sqlColumn = Lambda2Sql.toSql(column, this.tableName);
 		try (var connection = new DBConnection()) {
-			try (var result = connection.execute(String.format("select %s from %s group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn))) {
+			try (var result = connection.execute(String.format("select %s from `%s` group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn))) {
 				return result.next();
 			}
 		} catch (SQLException e) {
@@ -424,14 +431,14 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(T instance) throws SQLException {
-		var updateQuery = new StringBuilder("update ").append(this.tableName).append(" set ");
+		var updateQuery = new StringBuilder("update `").append(this.tableName).append("` set ");
 		var fieldJoiner = new StringJoiner(", ");
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
 			fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), getSQLValue(field, instance)));
 		});
 
-		updateQuery.append(fieldJoiner.toString()).append(" where id = ").append(instance.getId());
+		updateQuery.append(fieldJoiner.toString()).append(String.format(" where %s = ", this.idAccess)).append(instance.getId());
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery.toString());
 			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
@@ -449,12 +456,11 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public <R> void update(long entityId, SqlFunction<T, R> column, R newValue) throws SQLException {
-		var query = new StringBuilder("update ");
-		query.append(this.tableName).append(" set ").append(Lambda2Sql.toSql(column, this.tableName))
-				.append(" = ").append(convertObject(newValue)).append(" where ").append(this.tableName)
-				.append(".id = ").append(entityId).append(';');
+		SqlPredicate<T> whereCondition = x -> x.getId() == entityId;
+		var query = String.format("update `%s` set %s = %s where %s;", this.tableName, Lambda2Sql.toSql(column, this.tableName), convertObject(newValue), Lambda2Sql.toSql(whereCondition, this.tableName));
+
 		try (var connection = new DBConnection()) {
-			connection.update(query.toString());
+			connection.update(query);
 			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), entityId);
 		}
 	}
@@ -497,7 +503,7 @@ public class BaseService<T extends BaseEntity> {
 
 		var joinedIds = joiner.toString();
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from %s where %s.`id` in %s", this.tableName, this.tableName, joinedIds));
+			connection.update(String.format("delete from `%s` where %s in %s", this.tableName, this.idAccess, joinedIds));
 			Utilities.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
@@ -536,7 +542,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("delete from %s where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
+			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 			Utilities.logf("%s successfully deleted!", this.type.getSimpleName());
 		}
 	}
@@ -550,7 +556,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	public void truncateTable() throws SQLException {
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("truncate table %s;", this.tableName));
+			connection.update(String.format("truncate table `%s`;", this.tableName));
 			Utilities.logf("Table %s was successfully truncated.", this.tableName);
 		}
 	}
@@ -573,9 +579,9 @@ public class BaseService<T extends BaseEntity> {
 	 * @return An INSERT statement up to the VALUES keyword.
 	 */
 	private StringBuilder createInsertHeader() {
-		return new StringBuilder("insert into ").append(this.tableName).append(Utilities.getEntityFields(this.type)
+		return new StringBuilder("insert into `").append(this.tableName).append("` ").append(Utilities.getEntityFields(this.type)
 				.stream().map(field -> String.format("`%s`", Utilities.getColumnName(field)))
-				.collect(Collectors.joining(", ", " (", ")"))).append(" values ");
+				.collect(Collectors.joining(", ", "(", ")"))).append(" values ");
 	}
 
 	/**

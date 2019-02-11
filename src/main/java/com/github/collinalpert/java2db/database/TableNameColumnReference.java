@@ -53,7 +53,7 @@ public class TableNameColumnReference {
 	}
 
 	public String getSQLNotation() {
-		return String.format("`%s`.%s", getIdentifier(), Utilities.getColumnName(column));
+		return String.format("`%s`.`%s`", getIdentifier(), Utilities.getColumnName(column));
 	}
 
 	public String getAliasNotation() {
