@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.utilities;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.Mapper;
+import com.github.collinalpert.java2db.mappers.IMapper;
 import com.github.collinalpert.java2db.services.BaseService;
 
 import java.lang.reflect.InvocationTargetException;
@@ -14,10 +14,10 @@ import java.util.Map;
  *
  * @author Collin Alpert
  */
-public class IoC {
+public final class IoC {
 
 	private static Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
-	private static Map<Class<? extends BaseEntity>, Mapper<? extends BaseEntity>> mappers;
+	private static Map<Class<? extends BaseEntity>, IMapper<? extends BaseEntity>> mappers;
 
 
 	static {
@@ -71,12 +71,12 @@ public class IoC {
 	 * @return The previously registered instance of a service class.
 	 */
 	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> Mapper<E> resolveMapper(Class<E> clazz) {
+	public static <E extends BaseEntity> IMapper<E> resolveMapper(Class<E> clazz) {
 		if (!mappers.containsKey(clazz)) {
 			throw new IllegalArgumentException(String.format("An instance of a mapper for the entity %s has not been registered yet. Please use the \"registerMapper\" method.", clazz.getSimpleName()));
 		}
 
-		return (Mapper<E>) mappers.get(clazz);
+		return (IMapper<E>) mappers.get(clazz);
 	}
 
 	/**
@@ -89,9 +89,9 @@ public class IoC {
 	 * @return The mapper for the entity. If is does not exists, the default mapper is returned.
 	 */
 	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> Mapper<E> resolveMapperOrElse(Class<E> clazz, Mapper<E> defaultMapper) {
+	public static <E extends BaseEntity> IMapper<E> resolveMapperOrElse(Class<E> clazz, IMapper<E> defaultMapper) {
 		if (mappers.containsKey(clazz)) {
-			return (Mapper<E>) mappers.get(clazz);
+			return (IMapper<E>) mappers.get(clazz);
 		}
 
 		return defaultMapper;
@@ -134,7 +134,7 @@ public class IoC {
 	 * @param <E>    The type of the entity.
 	 * @param <M>    The type of the mapper class.
 	 */
-	public static <E extends BaseEntity, M extends Mapper<E>> void registerMapper(Class<E> clazz, M mapper) {
+	public static <E extends BaseEntity, M extends IMapper<E>> void registerMapper(Class<E> clazz, M mapper) {
 		mappers.put(clazz, mapper);
 	}
 

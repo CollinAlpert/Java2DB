@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  *
  * @author Collin Alpert
  */
-public class BaseMapper<T extends BaseEntity> implements Mapper<T> {
+public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 
 	private Class<T> clazz;
 

@@ -22,16 +22,34 @@ import java.util.StringJoiner;
  */
 public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseService<T> {
 
+	/**
+	 * Performs a soft delete on an entity instead of completely deleting it from the database.
+	 *
+	 * @param instance The instance to soft-delete on the database.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
 	@Override
 	public void delete(T instance) throws SQLException {
 		this.delete(instance.getId());
 	}
 
+	/**
+	 * Performs a soft delete on an entity instead of completely deleting it from the database.
+	 *
+	 * @param id The row with this id to soft-delete.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
 	@Override
 	public void delete(long id) throws SQLException {
 		super.update(id, BaseDeletableEntity::isDeleted, true);
 	}
 
+	/**
+	 * Performs a soft delete on an list of entities instead of completely deleting them from the database.
+	 *
+	 * @param entities The list of entities to soft-delete.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
 	@Override
 	public void delete(List<T> entities) throws SQLException {
 		var joiner = new StringJoiner(", ", "(", ")");
@@ -42,16 +60,29 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		var joinedIds = joiner.toString();
 		SqlFunction<T, ?> deletedFunc = BaseDeletableEntity::isDeleted;
 		try (var connection = new DBConnection()) {
-			connection.update(String.format("update %s set %s = 1 where %s.`id` in %s", this.tableName, Lambda2Sql.toSql(deletedFunc, this.tableName), this.tableName, joinedIds));
+			connection.update(String.format("update `%s` set %s = 1 where `%s`.`id` in %s", this.tableName, Lambda2Sql.toSql(deletedFunc, this.tableName), this.tableName, joinedIds));
 			Utilities.logf("%s with ids %s successfully soft deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
+	/**
+	 * Performs a soft delete on an variable amount of entities instead of completely deleting them from the database.
+	 *
+	 * @param entities A variable amount of entities to soft-delete.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
+	@SafeVarargs
 	@Override
-	public void delete(T... entities) throws SQLException {
+	public final void delete(T... entities) throws SQLException {
 		this.delete(Arrays.asList(entities));
 	}
 
+	/**
+	 * Performs a soft delete on a variable amount of entities instead of completely deleting them from the database.
+	 *
+	 * @param ids The ids to soft-delete the rows by.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
 	@Override
 	public void delete(long... ids) throws SQLException {
 		var list = new ArrayList<Long>(ids.length);
@@ -62,6 +93,12 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		this.delete(x -> list.contains(x.getId()));
 	}
 
+	/**
+	 * Performs a soft delete based on a condition instead of completely deleting entities from the database.
+	 *
+	 * @param predicate The condition to soft-delete by.
+	 * @throws SQLException for example because of a foreign key constraint.
+	 */
 	@Override
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		SqlFunction<T, Boolean> isDeletedFunction = BaseDeletableEntity::isDeleted;

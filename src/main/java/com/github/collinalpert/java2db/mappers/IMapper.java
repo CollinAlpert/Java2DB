@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 /**
  * @author Collin Alpert
  */
-public interface Mapper<T extends BaseEntity> {
+public interface IMapper<T extends BaseEntity> {
 
 	Optional<T> map(ResultSet set) throws SQLException;
 

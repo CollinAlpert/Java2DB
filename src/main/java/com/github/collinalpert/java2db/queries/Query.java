@@ -4,7 +4,7 @@ import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.ForeignKeyReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.Mapper;
+import com.github.collinalpert.java2db.mappers.IMapper;
 import com.github.collinalpert.java2db.services.BaseService;
 import com.github.collinalpert.java2db.utilities.Utilities;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 public class Query<T extends BaseEntity> {
 
 	private final Class<T> type;
-	private final Mapper<T> mapper;
+	private final IMapper<T> mapper;
 
 	private SqlPredicate<T> whereClause;
 	private SqlFunction<T, ?>[] orderBy;
@@ -45,7 +45,7 @@ public class Query<T extends BaseEntity> {
 	 * @param type   The entity to query.
 	 * @param mapper The mapper for mapping entities.
 	 */
-	public Query(Class<T> type, Mapper<T> mapper) {
+	public Query(Class<T> type, IMapper<T> mapper) {
 		this.type = type;
 		this.mapper = mapper;
 	}
@@ -136,8 +136,7 @@ public class Query<T extends BaseEntity> {
 	 * @param functions The columns to order by in a coalescing manner.
 	 * @return This {@link Query} object, now with a coalesced ORDER BY clause.
 	 */
-	@SafeVarargs
-	public final Query<T> orderBy(SqlFunction<T, ?>... functions) {
+	public Query<T> orderBy(SqlFunction<T, ?>... functions) {
 		return orderBy(OrderTypes.ASCENDING, functions);
 	}
 
@@ -148,8 +147,7 @@ public class Query<T extends BaseEntity> {
 	 * @param functions The columns to order by in a coalescing manner.
 	 * @return This {@link Query} object, now with a coalesced ORDER BY clause.
 	 */
-	@SafeVarargs
-	public final Query<T> orderBy(OrderTypes type, SqlFunction<T, ?>... functions) {
+	public Query<T> orderBy(OrderTypes type, SqlFunction<T, ?>... functions) {
 		this.orderBy = functions;
 		this.orderType = type;
 		return this;
@@ -185,7 +183,7 @@ public class Query<T extends BaseEntity> {
 	 *
 	 * @return The DQL statement for getting data from the database.
 	 */
-	private String buildQuery() {
+	protected String buildQuery() {
 		var builder = new StringBuilder("select ");
 		var fieldList = new LinkedList<String>();
 		var foreignKeyList = new LinkedList<ForeignKeyReference>();

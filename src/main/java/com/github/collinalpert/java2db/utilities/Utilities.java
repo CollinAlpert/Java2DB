@@ -7,11 +7,15 @@ import com.github.collinalpert.java2db.annotations.TableName;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.TableNameColumnReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.exceptions.AsynchronousOperationException;
 
 import java.lang.reflect.Field;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -134,5 +138,49 @@ public class Utilities {
 		}
 
 		return field.getName();
+	}
+
+	/**
+	 * Handles an {@code SQLException} that gets thrown inside a {@code Supplier}.
+	 *
+	 * @param supplier          The {@code Supplier} that throws the exception.
+	 * @param exceptionHandling The exception handling supplied for this exception.
+	 * @param <V>               The return type of the operation.
+	 * @return The original {@code Supplier} but now with the added exception handling.
+	 */
+	public static <V> Supplier<V> supplierHandling(ThrowableSupplier<V, SQLException> supplier, Consumer<SQLException> exceptionHandling) {
+		return () -> {
+			try {
+				return supplier.fetch();
+			} catch (SQLException e) {
+				if (exceptionHandling != null) {
+					exceptionHandling.accept(e);
+					return null;
+				} else {
+					throw new AsynchronousOperationException(e);
+				}
+			}
+		};
+	}
+
+	/**
+	 * Handles an {@code SQLException} that gets thrown inside a {@code Runnable}.
+	 *
+	 * @param runnable          The {@code Runnable} that throws the exception.
+	 * @param exceptionHandling The exception handling supplied for this exception.
+	 * @return The original {@code Runnable} but now with the added exception handling.
+	 */
+	public static Runnable runnableHandling(ThrowableRunnable<SQLException> runnable, Consumer<SQLException> exceptionHandling) {
+		return () -> {
+			try {
+				runnable.doAction();
+			} catch (SQLException e) {
+				if (exceptionHandling != null) {
+					exceptionHandling.accept(e);
+				} else {
+					throw new AsynchronousOperationException(e);
+				}
+			}
+		};
 	}
 }

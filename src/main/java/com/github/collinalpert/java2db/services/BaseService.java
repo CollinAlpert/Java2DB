@@ -4,7 +4,7 @@ import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
-import com.github.collinalpert.java2db.mappers.Mapper;
+import com.github.collinalpert.java2db.mappers.IMapper;
 import com.github.collinalpert.java2db.pagination.CacheablePaginationResult;
 import com.github.collinalpert.java2db.pagination.PaginationResult;
 import com.github.collinalpert.java2db.queries.OrderTypes;
@@ -61,7 +61,7 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * The mapper used for mapping database objects to Java entities in this service.
 	 */
-	private final Mapper<T> mapper;
+	protected final IMapper<T> mapper;
 
 	/**
 	 * Represents the id column being accessed.
@@ -75,6 +75,7 @@ public class BaseService<T extends BaseEntity> {
 		this.type = getGenericType();
 		this.mapper = IoC.resolveMapperOrElse(this.type, new BaseMapper<>(this.type));
 		this.tableName = Utilities.getTableName(this.type);
+
 		SqlFunction<T, Long> idFunc = BaseEntity::getId;
 		this.idAccess = Lambda2Sql.toSql(idFunc, this.tableName);
 	}
@@ -311,44 +312,44 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * Gets all values from the table and orders them in an ascending order.
 	 *
-	 * @param orderBy The property to order by.
+	 * @param orderBy The properties to order by.
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
-	public List<T> getAll(SqlFunction<T, ?> orderBy) {
-		return getAll(orderBy, OrderTypes.ASCENDING);
+	public List<T> getAll(SqlFunction<T, ?>... orderBy) {
+		return getAll(OrderTypes.ASCENDING, orderBy);
 	}
 
 	/**
 	 * Gets all values from the table and orders them in the specified order.
 	 *
-	 * @param orderBy     The property to order by.
+	 * @param orderBy     The properties to order by.
 	 * @param sortingType The order direction. Can be either ascending or descending.
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
-	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType) {
+	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).toList();
 	}
 
 	/**
 	 * Gets all values from the table, orders them in an ascending order and limits the result.
 	 *
-	 * @param orderBy The property to order by.
+	 * @param orderBy The properties to order by.
 	 * @param limit   The maximum records to return.
 	 * @return A list with the maximum size of the parameter specified and in an ascending order.
 	 */
-	public List<T> getAll(SqlFunction<T, ?> orderBy, int limit) {
-		return getAll(orderBy, OrderTypes.ASCENDING, limit);
+	public List<T> getAll(int limit, SqlFunction<T, ?>... orderBy) {
+		return getAll(limit, OrderTypes.ASCENDING, orderBy);
 	}
 
 	/**
 	 * Gets all values from the table, orders them in a specific order and limits the result.
 	 *
-	 * @param orderBy     The property to order by.
+	 * @param orderBy     The properties to order by.
 	 * @param sortingType The order direction. Can be either ascending or descending.
 	 * @param limit       The maximum records to return.
 	 * @return A list with the maximum size of the parameter specified and in an ascending order.
 	 */
-	public List<T> getAll(SqlFunction<T, ?> orderBy, OrderTypes sortingType, int limit) {
+	public List<T> getAll(int limit, OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).limit(limit).toList();
 	}
 
@@ -464,6 +465,7 @@ public class BaseService<T extends BaseEntity> {
 			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), entityId);
 		}
 	}
+
 	//endregion
 
 	//region Delete
