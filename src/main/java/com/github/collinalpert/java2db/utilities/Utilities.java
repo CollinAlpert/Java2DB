@@ -183,4 +183,18 @@ public class Utilities {
 			}
 		};
 	}
+
+	/**
+	 * Tries to perform a certain action while considering a checked exception that could occur.
+	 *
+	 * @param runnable The {@code Runnable} to try to execute.
+	 * @param <E>      The type of checked exception.
+	 */
+	public static <E extends Throwable> void tryAction(ThrowableRunnable<E> runnable) {
+		try {
+			runnable.doAction();
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+	}
 }

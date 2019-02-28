@@ -73,7 +73,7 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	protected BaseService() {
 		this.type = getGenericType();
-		this.mapper = IoC.resolveMapperOrElse(this.type, new BaseMapper<>(this.type));
+		this.mapper = IoC.resolveMapper(this.type, new BaseMapper<>(this.type));
 		this.tableName = Utilities.getTableName(this.type);
 
 		SqlFunction<T, Long> idFunc = BaseEntity::getId;
@@ -452,7 +452,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entityId The id of the record.
 	 * @param column   The column to update.
 	 * @param newValue The new value of the column.
-	 * @param <R>      The data type of the column. It must be the same as the data type of the new value.
+	 * @param <R>      The data type of the column to update. It must be the same as the data type of the new value.
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */

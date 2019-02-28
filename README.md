@@ -69,6 +69,7 @@ public class Person extends BaseEntity {
 	// When annotating a field with the @ForeignKeyEntity attribute,
 	// you are telling Java2DB that this is a POJO that depicts the
 	// foreign key relationship. It will be automatically filled with the according value.
+	// Adding this sort of field is completely optional.
 	@ForeignKeyEntity("genderId")
 	private Gender gender;
 	
@@ -113,7 +114,7 @@ As previously mentioned, to execute the query and retrieve a result, use the `to
 
 ### LIKE operations
 It is also possible to achieve `LIKE` operations using the String `startsWith`, `endsWith` and `contains` methods in a predicate. This, in the context of the `PersonService` from the [example](#example), would look something like this:\
-`getMultiple(p -> person.getName().startsWith("A"));`. The generated WHERE clause would be ``where `person`.name LIKE 'A%'``. Please do *not* use the String `equals` method to compare String values.
+`getMultiple(p -> person.getName().startsWith("A"));`. The generated WHERE clause would be ``where `person`.name LIKE 'A%'``.
 
 ### Counting
 For counting functionality, the `BaseService` provides a `count` method. You can use it to either count all rows in a table, or to count all rows which match a certain condition. E.g. `personService.count()` would return the total number of people while `personService.count(person -> person.getAge() >= 50)` would return the amount of people that are of age 50 and older in your table.
@@ -125,6 +126,12 @@ You can also check if a table has at least one row by calling `personService.any
 
 ### Duplicate value checking
 To check if a column's values are unique in a table, use the `hasDuplicates` method provided by the `BaseService`. It will return `true` if there is at least one duplicate value and false if all the values are unique.
+
+### Asynchronous queries
+As of version 4.0 it is possible to execute all of the CRUD operations asynchronously. 
+To use the asynchronous methods with your service classes, the individual service class should inherit from the 
+`AsyncBaseService`. You wil find all the methods that the `BaseService` has plus every method with an `Async` suffix. 
+That is the asynchronous version. Currently, there is no support for asynchronous pagination.
 
 ### Column name deviations
 To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.
@@ -181,11 +188,17 @@ Using the `DBConnection` class, you can execute SQL queries and also receive a `
 
 ```jshelllanguage
 try (var connection = new DBConnection()) {
-    connection.update(Files.lines(Paths.get("path/to/file.sql")).collect(Collectors.joining("\n")));
+    connection.update(Files.lines(Paths.get("path/to/file.sql")).collect(Collectors.joining()));
 }
 ```
 
 If you are trying to retrieve execute a more complex DQL statement and want a `ResultSet`, you can use the `execute` method from the `DBConnection` class.
+
+### Common structures
+Since there are some columns that are very common in database tables, Java2DB ships some base classes you can use in order to tackle some of the redundancy.\
+Entities modeling tables which feature a code and a description of some sort could benefit from using the `BaseCodeAndDescriptionEntity` in combination with the `BaseCodeAndDescriptionService`.\
+Entities modeling tables which feature support for "soft-deletion" could benefit from using the `BaseDeletableEntity` in combination with the `BaseDeletableService`.\
+These two extended options are also available in combination with each other.
 
 ### Miscellaneous 
 - If you would not like your queries logged in the console, use the `DBConnection.LOG_QUERIES = false;` statement on program start.
@@ -196,7 +209,7 @@ If you are trying to retrieve execute a more complex DQL statement and want a `R
 ### Custom mapping
 
 This is an advanced feature and completely optional.\
-You can define your own mappings by implementing the `Mapper` interface and registering your custom mapper with the `IoC.registerMapper` method. When you register a mapper, it will be used when mapping the database result into POJOs.
+You can define your own mappings by implementing the `IMapper` interface and registering your custom mapper with the `IoC.registerMapper` method. When you register a mapper, it will be used when mapping the database result into POJOs.
 
 ### Following the singleton pattern for services
 This feature is also optional and solely exists to promote good programming practice.\

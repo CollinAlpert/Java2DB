@@ -49,6 +49,10 @@ public class DBConnection implements Closeable {
 	 */
 	public static boolean LOG_QUERIES = true;
 
+	static {
+		DriverManager.setLoginTimeout(5);
+	}
+
 	private Connection connection;
 	private boolean isConnectionValid;
 
@@ -56,7 +60,6 @@ public class DBConnection implements Closeable {
 		try {
 			String connectionString = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DATABASE + "?serverTimezone=UTC";
 			Class.forName("com.mysql.cj.jdbc.Driver");
-			DriverManager.setLoginTimeout(5);
 			connection = DriverManager.getConnection(connectionString, USERNAME, PASSWORD);
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {

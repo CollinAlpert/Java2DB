@@ -81,7 +81,7 @@ public final class IoC {
 
 	/**
 	 * Resolves a mapper class. If an instance of this mapper has not been registered yet,
-	 * a backup mapper is used.
+	 * a backup mapper is used and also registered.
 	 *
 	 * @param clazz         The type of the corresponding mapper.
 	 * @param defaultMapper The default mapper, in case a custom mapper is not registered for this type.
@@ -89,11 +89,12 @@ public final class IoC {
 	 * @return The mapper for the entity. If is does not exists, the default mapper is returned.
 	 */
 	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> IMapper<E> resolveMapperOrElse(Class<E> clazz, IMapper<E> defaultMapper) {
+	public static <E extends BaseEntity> IMapper<E> resolveMapper(Class<E> clazz, IMapper<E> defaultMapper) {
 		if (mappers.containsKey(clazz)) {
 			return (IMapper<E>) mappers.get(clazz);
 		}
 
+		registerMapper(clazz, defaultMapper);
 		return defaultMapper;
 	}
 
@@ -112,6 +113,26 @@ public final class IoC {
 		}
 
 		return (S) services.get(clazz);
+	}
+
+	/**
+	 * Resolves a service class by the entity it was registered with. If an instance of this service has not been registered yet,
+	 * a backup service is used and also registered.
+	 *
+	 * @param clazz          The entity class corresponding to a service class.
+	 * @param defaultService The backup to use in case a service for the supplied class has not been registered yet.
+	 * @param <E>            The type of the entity.
+	 * @param <S>            The type of the service.
+	 * @return An instance of a previously registered service class.
+	 */
+	@SuppressWarnings("unchecked")
+	public static <E extends BaseEntity, S extends BaseService<E>> S resolveServiceByEntity(Class<E> clazz, S defaultService) {
+		if (services.containsKey(clazz)) {
+			return (S) services.get(clazz);
+		}
+
+		registerService(clazz, defaultService);
+		return defaultService;
 	}
 
 	/**

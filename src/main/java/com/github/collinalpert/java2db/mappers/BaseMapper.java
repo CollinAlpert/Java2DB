@@ -8,7 +8,6 @@ import com.github.collinalpert.java2db.utilities.UniqueIdentifier;
 import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -19,7 +18,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import static com.github.collinalpert.java2db.utilities.Utilities.tryAction;
 
 /**
  * Default mapper for converting a {@link ResultSet} to the respective Java entity.
@@ -65,14 +67,7 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 	@Override
 	public List<T> mapToList(ResultSet set) throws SQLException {
 		var list = new LinkedList<T>();
-		while (set.next()) {
-			var entity = IoC.createInstance(this.clazz);
-			setFields(set, entity);
-			list.add(entity);
-		}
-
-		set.close();
-		UniqueIdentifier.unset();
+		mapInternal(set, list::add);
 		return list;
 	}
 
@@ -85,16 +80,27 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 	 */
 	@Override
 	public Stream<T> mapToStream(ResultSet set) throws SQLException {
-		Stream<T> stream = Stream.empty();
+		var builder = Stream.<T>builder();
+		mapInternal(set, builder::add);
+		return builder.build();
+	}
+
+	/**
+	 * Internal handling for executing a certain action for every entity that is generated when iterating through a {@code ResultSet}.
+	 *
+	 * @param set      The {@code ResultSet} which will be iterated through.
+	 * @param handling The action to apply at each iteration of the given {@code ResultSet}.
+	 * @throws SQLException Handling a {@code ResultSet} can possibly result in this exception being thrown.
+	 */
+	private void mapInternal(ResultSet set, Consumer<T> handling) throws SQLException {
 		while (set.next()) {
 			var entity = IoC.createInstance(this.clazz);
 			setFields(set, entity);
-			stream = Stream.concat(stream, Stream.of(entity));
+			handling.accept(entity);
 		}
 
 		set.close();
 		UniqueIdentifier.unset();
-		return stream;
 	}
 
 	/**
@@ -120,6 +126,7 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 		}
 
 		UniqueIdentifier.unset();
+		set.close();
 		return trimArray(array);
 	}
 
@@ -175,17 +182,17 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 	 */
 	private <E extends BaseEntity> void setFields(ResultSet set, E entity, String identifier) throws SQLException {
 		var fields = Utilities.getEntityFields(entity.getClass(), true);
-		for (Field field : fields) {
+		for (var field : fields) {
 			field.setAccessible(true);
 			if (field.getAnnotation(ForeignKeyEntity.class) != null) {
 				var foreignKeyColumnName = field.getAnnotation(ForeignKeyEntity.class).value();
 				if (!BaseEntity.class.isAssignableFrom(field.getType())) {
-					throw new IllegalArgumentException(String.format("Type %s which is annotated as a foreign key, does not extend BaseEntity", field.getType().getSimpleName()));
+					throw new IllegalArgumentException(String.format("Type %s, which is annotated as a foreign key, does not extend BaseEntity.", field.getType().getSimpleName()));
 				}
 
 				// This block is for checking if the foreign key is null.
 				// That means that the corresponding foreign key entity must be set to null.
-				String foreignKeyName = "";
+				var foreignKeyName = "";
 				try {
 					var foreignKeyField = field.getDeclaringClass().getDeclaredField(foreignKeyColumnName);
 					foreignKeyName = foreignKeyField.getName();
@@ -194,7 +201,7 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 					}
 				} catch (NoSuchFieldException e) {
 					//Oh boi, you've done it now!
-					for (Field declaredField : field.getDeclaringClass().getDeclaredFields()) {
+					for (var declaredField : field.getDeclaringClass().getDeclaredFields()) {
 						if (declaredField.getAnnotation(ColumnName.class) != null && declaredField.getAnnotation(ColumnName.class).value().equals(foreignKeyColumnName)) {
 							foreignKeyName = declaredField.getAnnotation(ColumnName.class).value();
 							break;
@@ -209,11 +216,7 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 				@SuppressWarnings("unchecked")
 				var foreignKeyObject = IoC.createInstance((Class<? extends BaseEntity>) field.getType());
 				setFields(set, foreignKeyObject, UniqueIdentifier.getIdentifier(field.getName()));
-				try {
-					field.set(entity, foreignKeyObject);
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
-				}
+				tryAction(() -> field.set(entity, foreignKeyObject));
 
 				continue;
 			}
@@ -236,11 +239,7 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 				continue;
 			}
 
-			try {
-				field.set(entity, value);
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
+			tryAction(() -> field.set(entity, value));
 		}
 	}
 }

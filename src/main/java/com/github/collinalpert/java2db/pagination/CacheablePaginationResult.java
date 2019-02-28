@@ -71,8 +71,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	 * This call is equivalent to {@code invalidateCache(null)}.
 	 */
 	public void invalidateCaches() {
-		listCache.invalidate();
-		streamCache.invalidate();
+		invalidateCache(null);
 	}
 
 	/**
