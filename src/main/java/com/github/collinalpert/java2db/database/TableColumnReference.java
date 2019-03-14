@@ -10,7 +10,7 @@ import java.lang.reflect.Field;
  *
  * @author Collin Alpert
  */
-public class TableNameColumnReference {
+public class TableColumnReference {
 
 	/**
 	 * The table name of this reference.
@@ -33,7 +33,7 @@ public class TableNameColumnReference {
 	 */
 	private final String referenceColumn;
 
-	public TableNameColumnReference(String tableName, Field column, String alias, String referenceColumn) {
+	public TableColumnReference(String tableName, Field column, String alias, String referenceColumn) {
 		this.tableName = tableName;
 		this.column = column;
 		this.alias = alias;

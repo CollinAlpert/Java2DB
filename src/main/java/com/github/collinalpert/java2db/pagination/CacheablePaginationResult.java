@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 /**
  * Extended class that adds caching functionality to the pagination implementation.
+ * Note that caching will not be available for pages that are fetched asynchronously.
  *
  * @author Collin Alpert
  */
@@ -31,6 +32,11 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	private final CachingModule<Stream<T>> streamCache;
 
 	/**
+	 * The caching module for array results.
+	 */
+	private final CachingModule<T[]> arrayCache;
+
+	/**
 	 * Constructor that allows the creation of a cached pagination.
 	 * To obtain an instance, please use the {@code createPagination} methods in the {@link com.github.collinalpert.java2db.services.BaseService}
 	 *
@@ -42,10 +48,13 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 		this.cacheExpiration = cacheExpiration;
 		this.listCache = new CachingModule<>();
 		this.streamCache = new CachingModule<>();
+		this.arrayCache = new CachingModule<>();
 	}
 
 	/**
 	 * Gets a page by its identifier, or rather its number, an returns it as a {@link List}.
+	 * If this particular page has already been requested and has not expired yet, it will be returned from the in-memory cache.
+	 * Otherwise it will be fetched from the database.
 	 *
 	 * @param number The number of the page. The first page has the index 1.
 	 * @return A {@link List} of entities which are displayed on the requested page.
@@ -57,6 +66,8 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 
 	/**
 	 * Gets a page by its identifier, or rather its number, an returns it as a {@link Stream}.
+	 * If this particular page has already been requested and has not expired yet, it will be returned from the in-memory cache.
+	 * Otherwise it will be fetched from the database.
 	 *
 	 * @param number The number of the page. The first page has the index 1.
 	 * @return A {@link Stream} of entities which are displayed on the requested page.
@@ -64,6 +75,19 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	@Override
 	public Stream<T> getPageAsStream(int number) {
 		return streamCache.getOrAdd(Integer.toString(number), () -> super.getPageAsStream(number), cacheExpiration);
+	}
+
+	/**
+	 * Gets a page by its identifier, or rather its number, an returns it as an array.
+	 * If this particular page has already been requested and has not expired yet, it will be returned from the in-memory cache.
+	 * Otherwise it will be fetched from the database.
+	 *
+	 * @param number The number of the page. The first page has the index 1.
+	 * @return An array of entities which are displayed on the requested page.
+	 */
+	@Override
+	public T[] getPageAsArray(int number) {
+		return arrayCache.getOrAdd(Integer.toString(number), () -> super.getPageAsArray(number), cacheExpiration);
 	}
 
 	/**

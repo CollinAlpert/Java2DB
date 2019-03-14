@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>3.3</version>
+    <version>4.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -107,10 +107,30 @@ The last thing you need to do is give Java2DB access to your database. Set the s
 
 ## Features
 
-### Querying data
+### CRUD operations 
+
+#### Create
+Every service class has support for creating a single as well as multiple entities at once on the database.
+Check out the different `create` methods provided by your service class.
+To achieve asynchronous behavior, please read the [Asynchronous operations](#Asynchronous operations) section.
+
+#### Read
 The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream` or `toArray` methods. You should only need this approach seldomly.\
-Much rather, use the `getMultiple` method. It also returns a `Query` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `Query` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
+Much rather, use the `getSingle` or `getMultiple` methods. `getMultiple` returns a `Query` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `Query` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
 As previously mentioned, to execute the query and retrieve a result, use the `toList`, `toStream` or `toArray` methods.
+
+#### Update
+Every service class has support for updating a single as well as multiple entities at once on the database.
+Check out the different `update` methods provided by your service class. 
+To achieve asynchronous behavior, please read the [Asynchronous operations](#Asynchronous operations) section.
+To reduce overhead, there is also an update which changes the value for a single column. An example would look something like this:
+`service.update(entity.getId(), Person::getAge, 25)`. This would change a specific person's age to 25. 
+
+#### Delete
+Every service class has support for deleting a single as well as multiple entities at once on the database. 
+To achieve asynchronous behavior, please read the [Asynchronous operations](#Asynchronous operations) section.
+Check out the different `delete` methods provided by your service class.
+To include support for soft-deletion, please read the [Common structures](#Common structures) section.
 
 ### LIKE operations
 It is also possible to achieve `LIKE` operations using the String `startsWith`, `endsWith` and `contains` methods in a predicate. This, in the context of the `PersonService` from the [example](#example), would look something like this:\
@@ -127,11 +147,14 @@ You can also check if a table has at least one row by calling `personService.any
 ### Duplicate value checking
 To check if a column's values are unique in a table, use the `hasDuplicates` method provided by the `BaseService`. It will return `true` if there is at least one duplicate value and false if all the values are unique.
 
-### Asynchronous queries
+### Asynchronous operations
 As of version 4.0 it is possible to execute all of the CRUD operations asynchronously. 
 To use the asynchronous methods with your service classes, the individual service class should inherit from the 
 `AsyncBaseService`. You wil find all the methods that the `BaseService` has plus every method with an `Async` suffix. 
-That is the asynchronous version. Currently, there is no support for asynchronous pagination.
+That is the asynchronous version.\
+The asynchronous versions of methods which have a return value, e.g. `create`, `count` or `any`, accept a `Consumer` which defines an action for the value once it is computed asynchronously. 
+If you do not wish to use the computed value, e.g. for the `create` method, the `CallbackUtils` class offers an `empty()` method, which returns an empty `Consumer` that just does nothing. 
+Use this as an argument in the asynchronous methods, when needed.
 
 ### Column name deviations
 To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.
@@ -178,7 +201,8 @@ Of course, nothing prevents you from concatenating the predicates to something l
 ### Pagination
 In case you are interested in pagination, Java2DB also offers support for that. Since I am assuming you already know what pagination is, when reading this section, I will not explain it.\
 To receive a `PaginationResult`, use one of the `createPagination` methods from the `BaseService`. The result will allow you to get a certain page. The database query will only be executed when you request a page, in order to minimize data transfer of data that might not be needed. It would be unnecessary to load all of the pages if only the first one will be viewed by the user.\
-You also have option to add caching to the pagination. To do this, simply add a cache expiry duration to the `createPagination` method and you will receive a `CacheablePaginationResult`. When getting pages which you have previously requested, they will be loaded from the cache, which can significantly reduce loading times. This will only happen as long as the expiry duration is not over yet. After that, the page will be re-loaded from the database and loaded into the cache.\
+You also have option to add caching to the pagination. To do this, simply add a cache expiry duration to the `createPagination` method and you will receive a `CacheablePaginationResult`. When getting pages which you have previously requested, they will be loaded from the cache, which can significantly reduce loading times. This will only happen as long as the expiry duration is not over yet. 
+After that, the page will be re-loaded from the database and loaded into the cache. Caching for pages will not work if the pages were fetched asynchronously.\
 You also have the option to invalidate/clear the caches and trigger a fresh reload the next time a page is requested.\
 In case you want to add an ORDER BY statement to your pagination queries, you can do this on the `PaginationResult`. This will effect the pages in an overlapping manner and not just each page separately. 
 

@@ -6,6 +6,8 @@ import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -43,14 +45,14 @@ public class PaginationResult<T extends BaseEntity> {
 		}
 
 		if (pageNumber == 0) {
-			throw new IllegalArgumentException("The first page starts at the index 1.");
+			throw new IllegalArgumentException("The first page starts at the number 1.");
 		}
 	}
 
 	/**
 	 * Retrieves a specific page represented by a {@link List}. Only then will a query to the database be executed.
 	 *
-	 * @param number The number of the page. The first page has the index 1.
+	 * @param number The number of the page. The first page has the number 1.
 	 * @return A {@link List} of entities on this page.
 	 */
 	public List<T> getPage(int number) {
@@ -59,9 +61,21 @@ public class PaginationResult<T extends BaseEntity> {
 	}
 
 	/**
+	 * The asynchronous version of the {@link #getPage(int)} method.
+	 *
+	 * @param number   The number of the page. The first page has the number 1.
+	 * @param callback The callback to be executed once the page has been fetched.
+	 * @return A {@link CompletableFuture} representing the asynchronous operation.
+	 * @see #getPage(int)
+	 */
+	public CompletableFuture<Void> getPageAsync(int number, Consumer<? super List<T>> callback) {
+		return CompletableFuture.supplyAsync(() -> getPage(number)).thenAcceptAsync(callback);
+	}
+
+	/**
 	 * Retrieves a specific page represented by a {@link Stream}. Only then will a query to the database be executed.
 	 *
-	 * @param number The number of the page. The first page has the index 1.
+	 * @param number The number of the page. The first page has the number 1.
 	 * @return A {@link Stream} of entities on this page.
 	 */
 	public Stream<T> getPageAsStream(int number) {
@@ -70,32 +84,38 @@ public class PaginationResult<T extends BaseEntity> {
 	}
 
 	/**
-	 * An overload of the {@link #orderBy(OrderTypes, SqlFunction...)} method. Will order in an ascending fashion.
+	 * The asynchronous version of the {@link #getPageAsStream(int)} method.
 	 *
-	 * @param orderFunction The function to order by.
-	 * @return This object with the added ordering feature.
-	 * @see #orderBy(OrderTypes, SqlFunction...)
-	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
-	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
+	 * @param number   The number of the page. The first page has the number 1.
+	 * @param callback The callback to be executed once the page has been fetched.
+	 * @return A {@link CompletableFuture} representing the asynchronous operation.
+	 * @see #getPageAsStream(int)
 	 */
-	@Deprecated(since = "3.1.2", forRemoval = true)
-	public PaginationResult<T> orderBy(SqlFunction<T, ?> orderFunction) {
-		return orderBy(OrderTypes.ASCENDING, orderFunction);
+	public CompletableFuture<Void> getPageAsStreamAsync(int number, Consumer<? super Stream<T>> callback) {
+		return CompletableFuture.supplyAsync(() -> getPageAsStream(number)).thenAcceptAsync(callback);
 	}
 
 	/**
-	 * Adds an ORDER BY statement to the queries executed for the pages.
-	 * Note that this will order the entire pagination structure and not every page separately.
+	 * Retrieves a specific page represented by an array. Only then will a query to the database be executed.
 	 *
-	 * @param orderFunction The function to order by.
-	 * @param orderType     The direction of order.
-	 * @return This object with the added ordering feature.
-	 * @deprecated Since the coalescing feature for ORDER BY statements was introduced, there is no need for the single-parameter methods.
-	 * As removing them would be a breaking change, these methods will be removed as part of release 4.0.
+	 * @param number The number of the page. The first page has the number 1.
+	 * @return An array of entities on this page.
 	 */
-	@Deprecated(since = "3.1.2", forRemoval = true)
-	public PaginationResult<T> orderBy(SqlFunction<T, ?> orderFunction, OrderTypes orderType) {
-		return orderBy(orderType, orderFunction);
+	public T[] getPageAsArray(int number) {
+		pageNumberCheck(number);
+		return queries.get(number - 1).orderBy(this.orderType, this.orderFunctions).toArray();
+	}
+
+	/**
+	 * The asynchronous version of the {@link #getPageAsArray(int)} method.
+	 *
+	 * @param number   The number of the page. The first page has the number 1.
+	 * @param callback The callback to be executed once the page has been fetched.
+	 * @return A {@link CompletableFuture} representing the asynchronous operation.
+	 * @see #getPageAsArray(int)
+	 */
+	public CompletableFuture<Void> getPageAsArrayAsync(int number, Consumer<? super T[]> callback) {
+		return CompletableFuture.supplyAsync(() -> getPageAsArray(number)).thenAcceptAsync(callback);
 	}
 
 	/**

@@ -76,7 +76,7 @@ public class BaseService<T extends BaseEntity> {
 		this.mapper = IoC.resolveMapper(this.type, new BaseMapper<>(this.type));
 		this.tableName = Utilities.getTableName(this.type);
 
-		SqlFunction<T, Long> idFunc = BaseEntity::getId;
+		final SqlFunction<T, Long> idFunc = BaseEntity::getId;
 		this.idAccess = Lambda2Sql.toSql(idFunc, this.tableName);
 	}
 
@@ -95,7 +95,7 @@ public class BaseService<T extends BaseEntity> {
 		var joiner = new StringJoiner(", ", "(", ");");
 		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			joiner.add(getSQLValue(field, instance));
+			joiner.add(getSqlValue(field, instance));
 		});
 
 		//For using the default database setting for the id.
@@ -116,8 +116,8 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 * @see #create(List)
 	 */
-	@SafeVarargs
-	public final void create(T... instances) throws SQLException {
+	@SuppressWarnings("unchecked")
+	public void create(T... instances) throws SQLException {
 		create(Arrays.asList(instances));
 	}
 
@@ -143,7 +143,7 @@ public class BaseService<T extends BaseEntity> {
 			joiner = new StringJoiner(", ", "(", ")");
 			for (var entityField : entityFields) {
 				entityField.setAccessible(true);
-				joiner.add(getSQLValue(entityField, instances.get(i)));
+				joiner.add(getSqlValue(entityField, instances.get(i)));
 			}
 
 			//For using the default database setting for the id.
@@ -300,57 +300,47 @@ public class BaseService<T extends BaseEntity> {
 	}
 
 	/**
-	 * Gets all values from the table but limits the result.
+	 * Gets all values from the table and orders them in an ascending order.
 	 *
-	 * @param limit The maximum of records to return.
-	 * @return A list with the maximum size of the parameter specified.
+	 * @param orderBy The property to order by.
+	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
-	public List<T> getAll(int limit) {
-		return createQuery().limit(limit).toList();
+	public List<T> getAll(SqlFunction<T, ?> orderBy) {
+		return createQuery().orderBy(orderBy).toList();
 	}
 
 	/**
-	 * Gets all values from the table and orders them in an ascending order.
+	 * Gets all values from the table and orders them in an ascending order by multiple columns in a coalescing manner.
 	 *
 	 * @param orderBy The properties to order by.
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
+	@SuppressWarnings("unchecked")
 	public List<T> getAll(SqlFunction<T, ?>... orderBy) {
-		return getAll(OrderTypes.ASCENDING, orderBy);
+		return createQuery().orderBy(orderBy).toList();
 	}
 
 	/**
-	 * Gets all values from the table and orders them in the specified order.
+	 * Gets all values from the table and orders them in the specified order by multiple columns in a coalescing manner.
+	 *
+	 * @param orderBy     The property to order by.
+	 * @param sortingType The order direction. Can be either ascending or descending.
+	 * @return A list of all records ordered by a specific property in the specified order.
+	 */
+	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?> orderBy) {
+		return createQuery().orderBy(sortingType, orderBy).toList();
+	}
+
+	/**
+	 * Gets all values from the table and orders them in the specified order by multiple columns in a coalescing manner.
 	 *
 	 * @param orderBy     The properties to order by.
 	 * @param sortingType The order direction. Can be either ascending or descending.
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
+	@SuppressWarnings("unchecked")
 	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).toList();
-	}
-
-	/**
-	 * Gets all values from the table, orders them in an ascending order and limits the result.
-	 *
-	 * @param orderBy The properties to order by.
-	 * @param limit   The maximum records to return.
-	 * @return A list with the maximum size of the parameter specified and in an ascending order.
-	 */
-	public List<T> getAll(int limit, SqlFunction<T, ?>... orderBy) {
-		return getAll(limit, OrderTypes.ASCENDING, orderBy);
-	}
-
-	/**
-	 * Gets all values from the table, orders them in a specific order and limits the result.
-	 *
-	 * @param orderBy     The properties to order by.
-	 * @param sortingType The order direction. Can be either ascending or descending.
-	 * @param limit       The maximum records to return.
-	 * @return A list with the maximum size of the parameter specified and in an ascending order.
-	 */
-	public List<T> getAll(int limit, OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
-		return createQuery().orderBy(sortingType, orderBy).limit(limit).toList();
 	}
 
 	//endregion Query
@@ -432,22 +422,56 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(T instance) throws SQLException {
-		var updateQuery = new StringBuilder("update `").append(this.tableName).append("` set ");
-		var fieldJoiner = new StringJoiner(", ");
-		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
-			field.setAccessible(true);
-			fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), getSQLValue(field, instance)));
-		});
-
-		updateQuery.append(fieldJoiner.toString()).append(String.format(" where %s = ", this.idAccess)).append(instance.getId());
 		try (var connection = new DBConnection()) {
-			connection.update(updateQuery.toString());
+			connection.update(updateQuery(instance));
 			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
 		}
 	}
 
 	/**
-	 * Updates a specific column for a record in a table.
+	 * Variable argument version which behaves the same as the {@link #update(List)} method.
+	 *
+	 * @param instances The instances to update on the database.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
+	 * @see #update(List)
+	 */
+	@SuppressWarnings("unchecked")
+	public void update(T... instances) throws SQLException {
+		update(Arrays.asList(instances));
+	}
+
+	/**
+	 * Updates multiple entity's rows on the database. This method only opens one connection to the database as oppose
+	 * to when calling the {@link #update(BaseEntity)} method in a for loop, which opens a new connection for every entity.
+	 *
+	 * @param instances The instances to update on the database.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
+	 */
+	public void update(List<T> instances) throws SQLException {
+		try (var connection = new DBConnection()) {
+			for (T instance : instances) {
+				connection.update(updateQuery(instance));
+			}
+
+			Utilities.logf("%s were successfully updated.", this.type.getSimpleName());
+		}
+	}
+
+	private String updateQuery(T instance) {
+		var updateQuery = new StringBuilder("update `").append(this.tableName).append("` set ");
+		var fieldJoiner = new StringJoiner(", ");
+		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
+			field.setAccessible(true);
+			fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), getSqlValue(field, instance)));
+		});
+
+		return updateQuery.append(fieldJoiner.toString()).append(String.format(" where %s = ", this.idAccess)).append(instance.getId()).toString();
+	}
+
+	/**
+	 * Updates a specific column for a single record in a table.
 	 *
 	 * @param entityId The id of the record.
 	 * @param column   The column to update.
@@ -457,12 +481,25 @@ public class BaseService<T extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public <R> void update(long entityId, SqlFunction<T, R> column, R newValue) throws SQLException {
-		SqlPredicate<T> whereCondition = x -> x.getId() == entityId;
-		var query = String.format("update `%s` set %s = %s where %s;", this.tableName, Lambda2Sql.toSql(column, this.tableName), convertObject(newValue), Lambda2Sql.toSql(whereCondition, this.tableName));
+		update(x -> x.getId() == entityId, column, newValue);
+	}
+
+	/**
+	 * Updates a specific column for records matching a condition in a table.
+	 *
+	 * @param condition The condition to update the column by.
+	 * @param column    The column to update.
+	 * @param newValue  The new value of the column.
+	 * @param <R>       The data type of the column to update. It must be the same as the data type of the new value.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
+	 */
+	public <R> void update(SqlPredicate<T> condition, SqlFunction<T, R> column, R newValue) throws SQLException {
+		var query = String.format("update `%s` set %s = %s where %s;", this.tableName, Lambda2Sql.toSql(column, this.tableName), convertToSql(newValue), Lambda2Sql.toSql(condition, this.tableName));
 
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), entityId);
+			Utilities.logf("Column-specific update for table '%s' was successful.", Utilities.getTableName(this.type));
 		}
 	}
 
@@ -517,6 +554,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException for example because of a foreign key constraint.
 	 * @see #delete(List)
 	 */
+	@SuppressWarnings("unchecked")
 	public void delete(T... entities) throws SQLException {
 		delete(Arrays.asList(entities));
 	}
@@ -587,15 +625,15 @@ public class BaseService<T extends BaseEntity> {
 	}
 
 	/**
-	 * Returns a field value from ab entity in its SQL equivalent.
+	 * Returns a field value from an entity in its SQL equivalent.
 	 *
 	 * @param entityField    The value's field.
 	 * @param entityInstance The entity containing the value
 	 * @return A {@code String} representing the SQL value of the entity field.
 	 */
-	private String getSQLValue(Field entityField, T entityInstance) {
+	private String getSqlValue(Field entityField, T entityInstance) {
 		try {
-			return convertObject(entityField.get(entityInstance));
+			return convertToSql(entityField.get(entityInstance));
 		} catch (IllegalAccessException e) {
 			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
 		}
@@ -607,7 +645,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param value The value to convert.
 	 * @return The SQL version of a Java value.
 	 */
-	private String convertObject(Object value) {
+	private String convertToSql(Object value) {
 		if (value == null) {
 			return "null";
 		}

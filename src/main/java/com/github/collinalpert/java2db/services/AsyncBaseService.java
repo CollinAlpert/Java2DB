@@ -2,6 +2,7 @@ package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.queries.OrderTypes;
+import com.github.collinalpert.java2db.utilities.CallbackUtils;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
@@ -25,6 +26,17 @@ import static com.github.collinalpert.java2db.utilities.Utilities.supplierHandli
 public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 
 	//region Create
+
+	/**
+	 * The asynchronous version of the {@link #create(BaseEntity)} method without custom exception handling and without a callback.
+	 *
+	 * @param instance The instance to create on the database asynchronously.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #create(BaseEntity)
+	 */
+	public CompletableFuture<Void> createAsync(T instance) {
+		return createAsync(instance, CallbackUtils.empty());
+	}
 
 	/**
 	 * The asynchronous version of the {@link #create(BaseEntity)} method without custom exception handling.
@@ -58,9 +70,9 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #create(BaseEntity[])
 	 */
-	@SafeVarargs
-	public final CompletableFuture<Void> createAsync(T... instances) {
-		return createAsync(null, instances);
+	@SuppressWarnings("unchecked")
+	public CompletableFuture<Void> createAsync(T... instances) {
+		return createAsync(Arrays.asList(instances), null);
 	}
 
 	/**
@@ -71,9 +83,9 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #create(BaseEntity[])
 	 */
-	@SafeVarargs
-	public final CompletableFuture<Void> createAsync(Consumer<SQLException> exceptionHandling, T... instances) {
-		return CompletableFuture.runAsync(runnableHandling(() -> super.create(Arrays.asList(instances)), exceptionHandling));
+	@SuppressWarnings("unchecked")
+	public CompletableFuture<Void> createAsync(Consumer<SQLException> exceptionHandling, T... instances) {
+		return createAsync(Arrays.asList(instances), exceptionHandling);
 	}
 
 	/**
@@ -162,7 +174,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	/**
 	 * The asynchronous version of the {@link #hasDuplicates(SqlFunction)} method.
 	 *
-	 * @param column The column to check for duplicates in.
+	 * @param column   The column to check for duplicates in.
 	 * @param callback The action to apply to the result, once it is computed.
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #hasDuplicates(SqlFunction)
@@ -211,15 +223,15 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	}
 
 	/**
-	 * The asynchronous version of the {@link #getAll(int)} method.
+	 * The asynchronous version of the {@link #getAll(SqlFunction)} method.
 	 *
-	 * @param limit    The maximum of records to return.
 	 * @param callback The action to apply to the result, once it is computed.
+	 * @param orderBy  The property to order by.
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
-	 * @see #getAll(int)
+	 * @see #getAll(SqlFunction)
 	 */
-	public CompletableFuture<Void> getAllAsync(int limit, Consumer<? super List<T>> callback) {
-		return createQuery().limit(limit).toListAsync(callback);
+	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, SqlFunction<T, ?> orderBy) {
+		return createQuery().orderBy(orderBy).toListAsync(callback);
 	}
 
 	/**
@@ -230,8 +242,22 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #getAll(SqlFunction[])
 	 */
+	@SuppressWarnings("unchecked")
 	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, SqlFunction<T, ?>... orderBy) {
 		return getAllAsync(callback, OrderTypes.ASCENDING, orderBy);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #getAll(OrderTypes, SqlFunction)} method.
+	 *
+	 * @param callback    The action to apply to the result, once it is computed.
+	 * @param orderBy     The property to order by.
+	 * @param sortingType The order direction. Can be either ascending or descending.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #getAll(OrderTypes, SqlFunction)
+	 */
+	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, OrderTypes sortingType, SqlFunction<T, ?> orderBy) {
+		return createQuery().orderBy(sortingType, orderBy).toListAsync(callback);
 	}
 
 	/**
@@ -243,35 +269,9 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #getAll(OrderTypes, SqlFunction[])
 	 */
+	@SuppressWarnings("unchecked")
 	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).toListAsync(callback);
-	}
-
-	/**
-	 * The asynchronous version of the {@link #getAll(int, SqlFunction[])} method.
-	 *
-	 * @param callback The action to apply to the result, once it is computed.
-	 * @param orderBy  The properties to order by.
-	 * @param limit    The maximum records to return.
-	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
-	 * @see #getAll(int, SqlFunction[])
-	 */
-	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, int limit, SqlFunction<T, ?>... orderBy) {
-		return getAllAsync(callback, limit, OrderTypes.ASCENDING, orderBy);
-	}
-
-	/**
-	 * The asynchronous version of the {@link #getAll(int, OrderTypes, SqlFunction[])} method.
-	 *
-	 * @param callback    The action to apply to the result, once it is computed.
-	 * @param orderBy     The properties to order by.
-	 * @param sortingType The order direction. Can be either ascending or descending.
-	 * @param limit       The maximum records to return.
-	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
-	 * @see #getAll(int, OrderTypes, SqlFunction[])
-	 */
-	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, int limit, OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
-		return createQuery().orderBy(sortingType, orderBy).limit(limit).toListAsync(callback);
 	}
 
 	//endregion
@@ -304,7 +304,55 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	}
 
 	/**
-	 * The asynchronous version of the {@link #update(long, SqlFunction, Object)} method.
+	 * The asynchronous version of the {@link #update(BaseEntity[])} without custom exception handling.
+	 *
+	 * @param instances The instances to update asynchronously.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #update(BaseEntity[])
+	 */
+	@SuppressWarnings("unchecked")
+	public CompletableFuture<Void> updateAsync(T... instances) {
+		return updateAsync(Arrays.asList(instances), null);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #update(BaseEntity[])}.
+	 *
+	 * @param exceptionHandling Custom exception handling for the checked exception thrown by the underlying method.
+	 * @param instances         The instances to update asynchronously.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #update(BaseEntity[])
+	 */
+	@SuppressWarnings("unchecked")
+	public CompletableFuture<Void> updateAsync(Consumer<SQLException> exceptionHandling, T... instances) {
+		return updateAsync(Arrays.asList(instances), exceptionHandling);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #update(List)} without custom exception handling.
+	 *
+	 * @param instances The instances to update asynchronously.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #update(List)
+	 */
+	public CompletableFuture<Void> updateAsync(List<T> instances) {
+		return updateAsync(instances, null);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #update(List)}.
+	 *
+	 * @param instances         The instances to update asynchronously.
+	 * @param exceptionHandling Custom exception handling for the checked exception thrown by the underlying method.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #update(List)
+	 */
+	public CompletableFuture<Void> updateAsync(List<T> instances, Consumer<SQLException> exceptionHandling) {
+		return CompletableFuture.runAsync(runnableHandling(() -> super.update(instances), exceptionHandling));
+	}
+
+	/**
+	 * The asynchronous version of the {@link #update(long, SqlFunction, Object)} method without custom exception handling.
 	 *
 	 * @param entityId The id of the instance to update asynchronously.
 	 * @param column   The column of the entity to update.
@@ -314,7 +362,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #update(long, SqlFunction, Object)
 	 */
 	public <R> CompletableFuture<Void> updateAsync(long entityId, SqlFunction<T, R> column, R newValue) {
-		return updateAsync(entityId, column, newValue, null);
+		return updateAsync(x -> x.getId() == entityId, column, newValue, null);
 	}
 
 	/**
@@ -329,7 +377,36 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #update(long, SqlFunction, Object)
 	 */
 	public <R> CompletableFuture<Void> updateAsync(long entityId, SqlFunction<T, R> column, R newValue, Consumer<SQLException> exceptionHandling) {
-		return CompletableFuture.runAsync(runnableHandling(() -> super.update(entityId, column, newValue), exceptionHandling));
+		return updateAsync(x -> x.getId() == entityId, column, newValue, exceptionHandling);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #update(SqlPredicate, SqlFunction, Object)} method without custom exception handling.
+	 *
+	 * @param condition The condition to find records by which will be updated asynchronously.
+	 * @param column    The column of the entity to update.
+	 * @param newValue  The new value of the column.
+	 * @param <R>       The data type of the column to update. It must be the same as the data type of the new value.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #update(SqlPredicate, SqlFunction, Object)
+	 */
+	public <R> CompletableFuture<Void> updateAsync(SqlPredicate<T> condition, SqlFunction<T, R> column, R newValue) {
+		return updateAsync(condition, column, newValue, null);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #update(SqlPredicate, SqlFunction, Object)} method.
+	 *
+	 * @param condition         The condition to find records by which will be updated asynchronously.
+	 * @param column            The column of the entity to update.
+	 * @param newValue          The new value of the column.
+	 * @param exceptionHandling Custom exception handling for the checked exception thrown by the underlying method.
+	 * @param <R>               The data type of the column to update. It must be the same as the data type of the new value.
+	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
+	 * @see #update(SqlPredicate, SqlFunction, Object)
+	 */
+	public <R> CompletableFuture<Void> updateAsync(SqlPredicate<T> condition, SqlFunction<T, R> column, R newValue, Consumer<SQLException> exceptionHandling) {
+		return CompletableFuture.runAsync(runnableHandling(() -> super.update(condition, column, newValue), exceptionHandling));
 	}
 
 	//endregion
@@ -412,6 +489,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #delete(BaseEntity[])
 	 */
+	@SuppressWarnings("unchecked")
 	public CompletableFuture<Void> deleteAsync(T... entities) {
 		return deleteAsync(null, entities);
 	}
@@ -424,6 +502,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
 	 * @see #delete(BaseEntity[])
 	 */
+	@SuppressWarnings("unchecked")
 	public CompletableFuture<Void> deleteAsync(Consumer<SQLException> exceptionHandling, T... entities) {
 		return CompletableFuture.runAsync(runnableHandling(() -> super.delete(Arrays.asList(entities)), exceptionHandling));
 	}

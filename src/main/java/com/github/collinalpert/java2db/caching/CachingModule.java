@@ -64,8 +64,8 @@ public class CachingModule<T> {
 
 	private class Entry {
 
-		private T value;
-		private LocalDateTime expirationDate;
+		private final T value;
+		private final LocalDateTime expirationDate;
 
 		private Entry(T value, LocalDateTime expirationDate) {
 			this.value = value;
