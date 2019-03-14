@@ -112,7 +112,7 @@ The last thing you need to do is give Java2DB access to your database. Set the s
 #### Create
 Every service class has support for creating a single as well as multiple entities at once on the database.
 Check out the different `create` methods provided by your service class.
-To achieve asynchronous behavior, please read the [Asynchronous operations](#Asynchronous operations) section.
+To achieve asynchronous behavior, please read the [Asynchronous operations](#asynchronous-operations) section.
 
 #### Read
 The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream` or `toArray` methods. You should only need this approach seldomly.\
@@ -122,15 +122,15 @@ As previously mentioned, to execute the query and retrieve a result, use the `to
 #### Update
 Every service class has support for updating a single as well as multiple entities at once on the database.
 Check out the different `update` methods provided by your service class. 
-To achieve asynchronous behavior, please read the [Asynchronous operations](#Asynchronous operations) section.
+To achieve asynchronous behavior, please read the [Asynchronous operations](#asynchronous-operations) section.
 To reduce overhead, there is also an update which changes the value for a single column. An example would look something like this:
 `service.update(entity.getId(), Person::getAge, 25)`. This would change a specific person's age to 25. 
 
 #### Delete
 Every service class has support for deleting a single as well as multiple entities at once on the database. 
-To achieve asynchronous behavior, please read the [Asynchronous operations](#Asynchronous operations) section.
+To achieve asynchronous behavior, please read the [Asynchronous operations](#asynchronous-operations) section.
 Check out the different `delete` methods provided by your service class.
-To include support for soft-deletion, please read the [Common structures](#Common structures) section.
+To include support for soft-deletion, please read the [Common structures](#common-structures) section.
 
 ### LIKE operations
 It is also possible to achieve `LIKE` operations using the String `startsWith`, `endsWith` and `contains` methods in a predicate. This, in the context of the `PersonService` from the [example](#example), would look something like this:\
