@@ -132,12 +132,12 @@ public class Utilities {
 	 * @return The column name in the table.
 	 */
 	public static String getColumnName(Field field) {
-		ColumnName columnName;
-		if ((columnName = field.getAnnotation(ColumnName.class)) != null) {
-			return columnName.value();
+		var columnNameAnnotation = field.getAnnotation(ColumnName.class);
+		if (columnNameAnnotation == null) {
+			return field.getName();
 		}
 
-		return field.getName();
+		return columnNameAnnotation.value();
 	}
 
 	/**

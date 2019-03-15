@@ -3,11 +3,11 @@ package com.github.collinalpert.java2db.mappers;
 import com.github.collinalpert.java2db.annotations.ColumnName;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.modules.ArrayModule;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.UniqueIdentifier;
 import com.github.collinalpert.java2db.utilities.Utilities;
 
-import java.lang.reflect.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -86,6 +86,20 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 	}
 
 	/**
+	 * Maps a {@link ResultSet} with multiple rows to an array of Java entities.
+	 *
+	 * @param set The {@link ResultSet} to map.
+	 * @return An array of Java entities.
+	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
+	 */
+	@Override
+	public T[] mapToArray(ResultSet set) throws SQLException {
+		var module = new ArrayModule<>(this.clazz, 20);
+		mapInternal(set, module::addElement);
+		return module.getArray();
+	}
+
+	/**
 	 * Internal handling for executing a certain action for every entity that is generated when iterating through a {@code ResultSet}.
 	 *
 	 * @param set      The {@code ResultSet} which will be iterated through.
@@ -101,66 +115,6 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 
 		set.close();
 		UniqueIdentifier.unset();
-	}
-
-	/**
-	 * Maps a {@link ResultSet} with multiple rows to an array of Java entities.
-	 *
-	 * @param set The {@link ResultSet} to map.
-	 * @return An array of Java entities.
-	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
-	 */
-	@Override
-	public T[] mapToArray(ResultSet set) throws SQLException {
-		@SuppressWarnings("unchecked")
-		var array = (T[]) Array.newInstance(this.clazz, 20);
-		var index = 0;
-		while (set.next()) {
-			if (array.length - 1 == index) {
-				array = createCopy(array, array.length + 20, array.length);
-			}
-
-			var entity = IoC.createInstance(this.clazz);
-			setFields(set, entity);
-			array[index++] = entity;
-		}
-
-		UniqueIdentifier.unset();
-		set.close();
-		return trimArray(array);
-	}
-
-	/**
-	 * Trims an array, removing all unnecessary slots. Unnecessary slots are those that are {@code null}.
-	 *
-	 * @param array The array to trim.
-	 * @return A new array that has the size of it's containing elements.
-	 */
-	private T[] trimArray(T[] array) {
-		var lastElement = 0;
-		for (var i = array.length - 1; i >= 0; i--) {
-			if (array[i] != null) {
-				lastElement = i;
-				break;
-			}
-		}
-
-		return createCopy(array, lastElement + 1, lastElement + 1);
-	}
-
-	/**
-	 * Copies an array into an array with a new length.
-	 *
-	 * @param oldArray       The array to copy.
-	 * @param newLength      The new length of the array.
-	 * @param elementsToCopy The number of elements to copy to the new array.
-	 * @return A new array containing the old elements.
-	 */
-	private T[] createCopy(T[] oldArray, int newLength, int elementsToCopy) {
-		@SuppressWarnings("unchecked")
-		var newArray = (T[]) Array.newInstance(this.clazz, newLength);
-		System.arraycopy(oldArray, 0, newArray, 0, elementsToCopy);
-		return newArray;
 	}
 
 	/**

@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.pagination;
 
-import com.github.collinalpert.java2db.caching.CachingModule;
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.modules.CachingModule;
 import com.github.collinalpert.java2db.queries.Query;
 
 import java.time.Duration;

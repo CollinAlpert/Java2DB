@@ -1,4 +1,4 @@
-package com.github.collinalpert.java2db.caching;
+package com.github.collinalpert.java2db.modules;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * A simple caching module, which is used for basic caching functionality.
+ * A helper module which contains functionality for basic caching.
  * Its main task to cache query results.
  *
  * @author Collin Alpert
