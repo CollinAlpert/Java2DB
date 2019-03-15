@@ -2,6 +2,7 @@ package com.github.collinalpert.java2db.pagination;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.modules.CachingModule;
+import com.github.collinalpert.java2db.modules.LazyModule;
 import com.github.collinalpert.java2db.queries.Query;
 
 import java.time.Duration;
@@ -24,17 +25,17 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	/**
 	 * The caching module for {@link Stream} results.
 	 */
-	private final CachingModule<List<T>> listCache;
+	private final LazyModule<CachingModule<List<T>>> listCache;
 
 	/**
 	 * The caching module for {@link Stream} results.
 	 */
-	private final CachingModule<Stream<T>> streamCache;
+	private final LazyModule<CachingModule<Stream<T>>> streamCache;
 
 	/**
 	 * The caching module for array results.
 	 */
-	private final CachingModule<T[]> arrayCache;
+	private final LazyModule<CachingModule<T[]>> arrayCache;
 
 	/**
 	 * Constructor that allows the creation of a cached pagination.
@@ -46,9 +47,9 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	public CacheablePaginationResult(List<Query<T>> queries, Duration cacheExpiration) {
 		super(queries);
 		this.cacheExpiration = cacheExpiration;
-		this.listCache = new CachingModule<>();
-		this.streamCache = new CachingModule<>();
-		this.arrayCache = new CachingModule<>();
+		this.listCache = new LazyModule<>(CachingModule::new);
+		this.streamCache = new LazyModule<>(CachingModule::new);
+		this.arrayCache = new LazyModule<>(CachingModule::new);
 	}
 
 	/**
@@ -61,7 +62,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	 */
 	@Override
 	public List<T> getPage(int number) {
-		return listCache.getOrAdd(Integer.toString(number), () -> super.getPage(number), cacheExpiration);
+		return listCache.getValue().getOrAdd(Integer.toString(number), () -> super.getPage(number), cacheExpiration);
 	}
 
 	/**
@@ -74,7 +75,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	 */
 	@Override
 	public Stream<T> getPageAsStream(int number) {
-		return streamCache.getOrAdd(Integer.toString(number), () -> super.getPageAsStream(number), cacheExpiration);
+		return streamCache.getValue().getOrAdd(Integer.toString(number), () -> super.getPageAsStream(number), cacheExpiration);
 	}
 
 	/**
@@ -87,7 +88,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	 */
 	@Override
 	public T[] getPageAsArray(int number) {
-		return arrayCache.getOrAdd(Integer.toString(number), () -> super.getPageAsArray(number), cacheExpiration);
+		return arrayCache.getValue().getOrAdd(Integer.toString(number), () -> super.getPageAsArray(number), cacheExpiration);
 	}
 
 	/**
@@ -105,7 +106,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	 * @param name The name, or rather the page number, of the value in the cache.
 	 */
 	public void invalidateCache(String name) {
-		listCache.invalidate(name);
-		streamCache.invalidate(name);
+		listCache.getValue().invalidate(name);
+		streamCache.getValue().invalidate(name);
 	}
 }

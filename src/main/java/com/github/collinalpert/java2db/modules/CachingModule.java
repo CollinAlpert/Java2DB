@@ -49,7 +49,7 @@ public class CachingModule<T> {
 
 	/**
 	 * Invalidates, or rather removes, a specific cache entry.
-	 * This will prompt a reload the next time a value with this cache name is requested.
+	 * This will prompt a reload from the database the next time a value with this cache name is requested.
 	 *
 	 * @param name The name of the entry in the cache.
 	 */
