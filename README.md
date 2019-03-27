@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>4.0</version>
+    <version>4.1</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -155,6 +155,50 @@ That is the asynchronous version.\
 The asynchronous versions of methods which have a return value, e.g. `create`, `count` or `any`, accept a `Consumer` which defines an action for the value once it is computed asynchronously. 
 If you do not wish to use the computed value, e.g. for the `create` method, the `CallbackUtils` class offers an `empty()` method, which returns an empty `Consumer` that just does nothing. 
 Use this as an argument in the asynchronous methods, when needed.
+
+### Enums for static values
+Lets suppose you are using a "mood" in which you have certain moods (happy, sad, mad, etc.) stored. Now, to describe the mood 
+of a person you would obviously reference this table via a foreign key and add the `@ForeignKeyEntity` attribute to a POJO field you have defined for the "mood" table.
+For static tables, meaning tables which just contain informational values e.g. statuses which do not change, you can define an enum to keep track of the values.
+That way a complete entity is not always needed. Using the above example, it would look something like this:
+
+```java
+// An enum representing used in combination with the @ForeignKeyEntity must implement IdentifiableEnum. 
+public enum MoodTypes implements IdentifiableEnum {
+	
+    HAPPY(1), SAD(2), MAD(3);
+	
+    private final int id;
+	
+    MoodTypes(int id) {
+        this.id = id;
+    }
+
+    @Override
+    public long getId() {
+        return this.id;
+    }
+}
+```
+
+```java
+@TableName("person")
+public class Person extends BaseEntity {
+	
+    // All of the above fields.
+    
+    private int moodId;
+    
+    // You can still use the foreign key entity if you like, 
+    // but it becomes sort of redundant as soon as you use the enum.
+    @ForeignKeyEntity("moodId")
+    private Mood mood;
+    
+    // The enum value will be set to the value corresponding with the "moodId".
+    @ForeignKeyEntity("moodId")
+    private MoodTypes moodType;
+}
+``` 
 
 ### Column name deviations
 To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.

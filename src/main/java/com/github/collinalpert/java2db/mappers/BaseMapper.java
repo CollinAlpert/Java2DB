@@ -2,17 +2,20 @@ package com.github.collinalpert.java2db.mappers;
 
 import com.github.collinalpert.java2db.annotations.ColumnName;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
+import com.github.collinalpert.java2db.contracts.IdentifiableEnum;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.modules.ArrayModule;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.java2db.utilities.UniqueIdentifier;
 import com.github.collinalpert.java2db.utilities.Utilities;
 
+import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
@@ -22,6 +25,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static com.github.collinalpert.java2db.utilities.Utilities.tryAction;
+import static com.github.collinalpert.java2db.utilities.Utilities.tryGetValue;
 
 /**
  * Default mapper for converting a {@link ResultSet} to the respective Java entity.
@@ -138,32 +142,31 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 		var fields = Utilities.getEntityFields(entity.getClass(), true);
 		for (var field : fields) {
 			field.setAccessible(true);
+
 			if (field.getAnnotation(ForeignKeyEntity.class) != null) {
-				var foreignKeyColumnName = field.getAnnotation(ForeignKeyEntity.class).value();
+
+				if (field.getType().isEnum()) {
+					if (!IdentifiableEnum.class.isAssignableFrom(field.getType())) {
+						throw new IllegalArgumentException(String.format("The enum %s used in %s was annotated with a ForeignKeyEntity attribute but does not extend IdentifiableEnum.", field.getType().getSimpleName(), field.getDeclaringClass().getSimpleName()));
+					}
+
+					var foreignKeyName = getForeignKeyName(field);
+					var foundEnum = Arrays.stream(field.getType().getEnumConstants())
+							.map(x -> (IdentifiableEnum) x)
+							.filter(x -> Long.valueOf(tryGetValue(() -> getAccessibleField(field.getDeclaringClass(), foreignKeyName).get(entity)).toString()) == x.getId())
+							.findFirst();
+
+					foundEnum.ifPresent(identifiableEnum -> tryAction(() -> field.set(entity, field.getType().cast(identifiableEnum))));
+
+					continue;
+				}
+
 				if (!BaseEntity.class.isAssignableFrom(field.getType())) {
 					throw new IllegalArgumentException(String.format("Type %s, which is annotated as a foreign key, does not extend BaseEntity.", field.getType().getSimpleName()));
 				}
 
-				// This block is for checking if the foreign key is null.
-				// That means that the corresponding foreign key entity must be set to null.
-				var foreignKeyName = "";
-				try {
-					var foreignKeyField = field.getDeclaringClass().getDeclaredField(foreignKeyColumnName);
-					foreignKeyName = foreignKeyField.getName();
-					if (foreignKeyField.getAnnotation(ColumnName.class) != null) {
-						foreignKeyName = foreignKeyField.getAnnotation(ColumnName.class).value();
-					}
-				} catch (NoSuchFieldException e) {
-					//Oh boi, you've done it now!
-					for (var declaredField : field.getDeclaringClass().getDeclaredFields()) {
-						if (declaredField.getAnnotation(ColumnName.class) != null && declaredField.getAnnotation(ColumnName.class).value().equals(foreignKeyColumnName)) {
-							foreignKeyName = declaredField.getAnnotation(ColumnName.class).value();
-							break;
-						}
-					}
-				}
-
-				if (set.getObject((identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + foreignKeyName) == null) {
+				// If foreign key is null, the corresponding entity must also be null.
+				if (set.getObject((identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + getForeignKeyName(field)) == null) {
 					continue;
 				}
 
@@ -195,5 +198,30 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 
 			tryAction(() -> field.set(entity, value));
 		}
+	}
+
+	private String getForeignKeyName(Field field) {
+		var foreignKeyColumnName = field.getAnnotation(ForeignKeyEntity.class).value();
+
+		try {
+			var foreignKeyField = field.getDeclaringClass().getDeclaredField(foreignKeyColumnName);
+			return Utilities.getColumnName(foreignKeyField);
+		} catch (NoSuchFieldException e) {
+			//Oh boi, you've done it now! This case occurs when a foreign key field gets altered by a ColumnName attribute.
+			for (var declaredField : field.getDeclaringClass().getDeclaredFields()) {
+				ColumnName columnName;
+				if ((columnName = declaredField.getAnnotation(ColumnName.class)) != null && columnName.value().equals(foreignKeyColumnName)) {
+					return columnName.value();
+				}
+			}
+		}
+
+		return "";
+	}
+
+	private Field getAccessibleField(Class<?> clazz, String name) throws NoSuchFieldException {
+		var field = clazz.getDeclaredField(name);
+		field.setAccessible(true);
+		return field;
 	}
 }

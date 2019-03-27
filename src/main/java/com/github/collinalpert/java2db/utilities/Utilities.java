@@ -76,6 +76,10 @@ public class Utilities {
 	public static List<TableColumnReference> getAllFields(Class<? extends BaseEntity> instanceClass, String alias) {
 		var fields = new LinkedList<TableColumnReference>();
 		for (var field : getEntityFields(instanceClass, true)) {
+			if (field.getType().isEnum()) {
+				continue;
+			}
+
 			if (field.getAnnotation(ForeignKeyEntity.class) != null) {
 				var tempAlias = UniqueIdentifier.generate(getTableName(field.getType()).substring(0, 1), field.getName());
 				fields.add(new TableColumnReference(getTableName(instanceClass), field, tempAlias, alias));
@@ -195,6 +199,22 @@ public class Utilities {
 			runnable.doAction();
 		} catch (Throwable e) {
 			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Tries to perform a certain supplier and retrieve its value while considering a checked exception that could occur.
+	 *
+	 * @param supplier The {@code Supplier} to try to execute.
+	 * @param <T>      The type of value to return.
+	 * @param <E>      The type of checked exception.
+	 * @return The value returned by the supplier, assuming it can be excecuted without throwing an exception.
+	 */
+	public static <T, E extends Throwable> T tryGetValue(ThrowableSupplier<T, E> supplier) {
+		try {
+			return supplier.fetch();
+		} catch (Throwable e) {
+			throw new RuntimeException("Underlying method threw an exception.", e);
 		}
 	}
 }
