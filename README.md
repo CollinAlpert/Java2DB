@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>4.1</version>
+    <version>4.1.1</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -101,7 +101,7 @@ public class PersonService extends BaseService<Person> {
 Every service *must* extend `BaseService`.
 
 That's it! Now we can get data from the database using the services using simple methods like `getById` and so on.\
-As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.\
+As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.
 
 The last thing you need to do is give Java2DB access to your database. Set the static variables `HOST`, `DATABASE`, `USERNAME`, `PASSWORD` and optionally `PORT` of the `DBConnection` class to achieve possibility of connection.
 

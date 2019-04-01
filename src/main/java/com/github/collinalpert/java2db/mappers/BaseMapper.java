@@ -181,22 +181,28 @@ public class BaseMapper<T extends BaseEntity> implements IMapper<T> {
 			var columnName = Utilities.getColumnName(field);
 			var columnLabel = (identifier == null ? Utilities.getTableName(entity.getClass()) : identifier) + "_" + columnName;
 
-			Object value;
-			if (field.getType() == LocalDateTime.class) {
-				value = set.getTimestamp(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDateTime();
-			} else if (field.getType() == LocalDate.class) {
-				value = set.getDate(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalDate();
-			} else if (field.getType() == LocalTime.class) {
-				value = set.getTime(columnLabel, Calendar.getInstance(Locale.getDefault())).toLocalTime();
-			} else {
-				value = set.getObject(columnLabel);
-			}
+			Object value = getValue(set, columnLabel, field.getType());
 
 			if (value == null) {
 				continue;
 			}
 
 			tryAction(() -> field.set(entity, value));
+		}
+	}
+
+	private Object getValue(ResultSet set, String columnLabel, Class<?> type) throws SQLException {
+		if (type == LocalDateTime.class) {
+			var value = set.getTimestamp(columnLabel, Calendar.getInstance(Locale.getDefault()));
+			return value == null ? null : value.toLocalDateTime();
+		} else if (type == LocalDate.class) {
+			var value = set.getDate(columnLabel, Calendar.getInstance(Locale.getDefault()));
+			return value == null ? null : value.toLocalDate();
+		} else if (type == LocalTime.class) {
+			var value = set.getTime(columnLabel, Calendar.getInstance(Locale.getDefault()));
+			return value == null ? null : value.toLocalTime();
+		} else {
+			return set.getObject(columnLabel);
 		}
 	}
 

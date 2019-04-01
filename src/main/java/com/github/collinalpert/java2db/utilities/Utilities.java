@@ -203,7 +203,7 @@ public class Utilities {
 	}
 
 	/**
-	 * Tries to perform a certain supplier and retrieve its value while considering a checked exception that could occur.
+	 * Tries to execute a supplier and retrieve its value while considering a checked exception that could occur.
 	 *
 	 * @param supplier The {@code Supplier} to try to execute.
 	 * @param <T>      The type of value to return.
