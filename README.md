@@ -7,7 +7,7 @@ Feature requests are always welcome. Just open an issue. Really, don't hesitate.
 
 If you are completely lost or have no idea how to use this library (or both), feel free to [contact me](mailto:collinalpert@gmail.com). I would be happy to assist you with any problems you might have.
 
-**Please note:** This is a Java 11 library. Make sure you have Java 10 installed when using this library. This library is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.\
+**Please note:** This is a Java 11 library. Make sure you have Java 11 installed when using this library. This library is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.\
 It is meant for projects which want to interact with their database in a simple, but easy way, without bloating the source code with SQL queries.
 
 ## Introduction
