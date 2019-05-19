@@ -1,16 +1,20 @@
 package com.github.collinalpert.java2db.services;
 
+import com.github.collinalpert.java2db.annotations.DefaultIfNull;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.mappers.BaseMapper;
-import com.github.collinalpert.java2db.mappers.IMapper;
+import com.github.collinalpert.java2db.mappers.Mappable;
+import com.github.collinalpert.java2db.modules.AnnotationModule;
+import com.github.collinalpert.java2db.modules.FieldModule;
+import com.github.collinalpert.java2db.modules.LoggingModule;
+import com.github.collinalpert.java2db.modules.TableModule;
 import com.github.collinalpert.java2db.pagination.CacheablePaginationResult;
 import com.github.collinalpert.java2db.pagination.PaginationResult;
+import com.github.collinalpert.java2db.queries.EntityQuery;
 import com.github.collinalpert.java2db.queries.OrderTypes;
-import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.java2db.utilities.IoC;
-import com.github.collinalpert.java2db.utilities.Utilities;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
@@ -37,14 +41,22 @@ import java.util.stream.Collectors;
  */
 public class BaseService<T extends BaseEntity> {
 
-	private static final DateTimeFormatter dateTimeFormatter;
-	private static final DateTimeFormatter dateFormatter;
-	private static final DateTimeFormatter timeFormatter;
+	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+	private static final AnnotationModule annotationModule;
+	private static final FieldModule fieldModule;
+	private static final TableModule tableModule;
+	/**
+	 * The logger used to log queries and messages to the console.
+	 */
+	private static final LoggingModule loggingModule;
 
 	static {
-		dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-		dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-		timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+		annotationModule = new AnnotationModule();
+		fieldModule = new FieldModule();
+		tableModule = new TableModule();
+		loggingModule = new LoggingModule();
 	}
 
 	/**
@@ -61,7 +73,7 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * The mapper used for mapping database objects to Java entities in this service.
 	 */
-	protected final IMapper<T> mapper;
+	protected final Mappable<T> mapper;
 
 	/**
 	 * Represents the id column being accessed.
@@ -74,7 +86,7 @@ public class BaseService<T extends BaseEntity> {
 	protected BaseService() {
 		this.type = getGenericType();
 		this.mapper = IoC.resolveMapper(this.type, new BaseMapper<>(this.type));
-		this.tableName = Utilities.getTableName(this.type);
+		this.tableName = tableModule.getTableName(this.type);
 
 		final SqlFunction<T, Long> idFunc = BaseEntity::getId;
 		this.idAccess = Lambda2Sql.toSql(idFunc, this.tableName);
@@ -93,8 +105,13 @@ public class BaseService<T extends BaseEntity> {
 	public long create(T instance) throws SQLException {
 		var insertQuery = createInsertHeader();
 		var joiner = new StringJoiner(", ", "(", ");");
-		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
+		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
+			if (getFieldValue(field, instance) == null && annotationModule.hasAnnotation(field, DefaultIfNull.class, DefaultIfNull::onCreate)) {
+				joiner.add("default");
+				return;
+			}
+
 			joiner.add(getSqlValue(field, instance));
 		});
 
@@ -103,7 +120,7 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(joiner.toString());
 		try (var connection = new DBConnection()) {
 			var id = connection.update(insertQuery.toString());
-			Utilities.logf("%s successfully created!", this.type.getSimpleName());
+			loggingModule.logf("%s successfully created!", this.type.getSimpleName());
 			return id;
 		}
 	}
@@ -139,11 +156,17 @@ public class BaseService<T extends BaseEntity> {
 		var rows = new String[instances.size()];
 		StringJoiner joiner;
 		for (int i = 0, instancesSize = instances.size(); i < instancesSize; i++) {
-			var entityFields = Utilities.getEntityFields(instances.get(i).getClass(), BaseEntity.class);
+			var entityFields = fieldModule.getEntityFields(instances.get(i).getClass(), BaseEntity.class);
 			joiner = new StringJoiner(", ", "(", ")");
 			for (var entityField : entityFields) {
 				entityField.setAccessible(true);
-				joiner.add(getSqlValue(entityField, instances.get(i)));
+				var instance = instances.get(i);
+				if (getFieldValue(entityField, instance) == null && annotationModule.hasAnnotation(entityField, DefaultIfNull.class, DefaultIfNull::onCreate)) {
+					joiner.add("default");
+					return;
+				}
+
+				joiner.add(getSqlValue(entityField, instance));
 			}
 
 			//For using the default database setting for the id.
@@ -154,7 +177,7 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(String.join(", ", rows));
 		try (var connection = new DBConnection()) {
 			connection.update(insertQuery.toString());
-			Utilities.logf("%s entities were successfully created.", this.type.getSimpleName());
+			loggingModule.logf("%s entities were successfully created.", this.type.getSimpleName());
 		}
 	}
 
@@ -256,12 +279,12 @@ public class BaseService<T extends BaseEntity> {
 	//region Query
 
 	/**
-	 * @return a {@link Query} object with which a DQL statement can be built, using operations like order by, limit etc.
-	 * If you do not require a plain {@link Query}, please consider using the
+	 * @return a {@link EntityQuery} object with which a DQL statement can be built, using operations like order by, limit etc.
+	 * If you do not require a plain {@link EntityQuery}, please consider using the
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
-	protected Query<T> createQuery() {
-		return new Query<>(this.type, this.mapper);
+	protected EntityQuery<T> createQuery() {
+		return new EntityQuery<>(this.type, this.mapper);
 	}
 
 	/**
@@ -280,7 +303,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL statement.
 	 * @return A list of entities matching the result of the query.
 	 */
-	public Query<T> getMultiple(SqlPredicate<T> predicate) {
+	public EntityQuery<T> getMultiple(SqlPredicate<T> predicate) {
 		return createQuery().where(predicate);
 	}
 
@@ -343,7 +366,7 @@ public class BaseService<T extends BaseEntity> {
 		return createQuery().orderBy(sortingType, orderBy).toList();
 	}
 
-	//endregion Query
+	//endregion EntityQuery
 
 	//region Pagination
 
@@ -424,7 +447,7 @@ public class BaseService<T extends BaseEntity> {
 	public void update(T instance) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery(instance));
-			Utilities.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
+			loggingModule.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
 		}
 	}
 
@@ -455,16 +478,17 @@ public class BaseService<T extends BaseEntity> {
 				connection.update(updateQuery(instance));
 			}
 
-			Utilities.logf("%s were successfully updated.", this.type.getSimpleName());
+			loggingModule.logf("%s were successfully updated.", this.type.getSimpleName());
 		}
 	}
 
 	private String updateQuery(T instance) {
 		var updateQuery = new StringBuilder("update `").append(this.tableName).append("` set ");
 		var fieldJoiner = new StringJoiner(", ");
-		Utilities.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
+		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			fieldJoiner.add(String.format("`%s` = %s", Utilities.getColumnName(field), getSqlValue(field, instance)));
+			var sqlValue = getFieldValue(field, instance) == null && annotationModule.hasAnnotation(field, DefaultIfNull.class, DefaultIfNull::onUpdate) ? "default" : getSqlValue(field, instance);
+			fieldJoiner.add(String.format("`%s` = %s", tableModule.getColumnName(field), sqlValue));
 		});
 
 		return updateQuery.append(fieldJoiner.toString()).append(String.format(" where %s = ", this.idAccess)).append(instance.getId()).toString();
@@ -472,6 +496,7 @@ public class BaseService<T extends BaseEntity> {
 
 	/**
 	 * Updates a specific column for a single record in a table.
+	 * This method is not affected by the {@link DefaultIfNull} annotation.
 	 *
 	 * @param entityId The id of the record.
 	 * @param column   The column to update.
@@ -486,6 +511,7 @@ public class BaseService<T extends BaseEntity> {
 
 	/**
 	 * Updates a specific column for records matching a condition in a table.
+	 * This method is not affected by the {@link DefaultIfNull} annotation.
 	 *
 	 * @param condition The condition to update the column by.
 	 * @param column    The column to update.
@@ -499,7 +525,7 @@ public class BaseService<T extends BaseEntity> {
 
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			Utilities.logf("Column-specific update for table '%s' was successful.", Utilities.getTableName(this.type));
+			loggingModule.logf("Column-specific update for table '%s' was successful.", tableModule.getTableName(this.type));
 		}
 	}
 
@@ -543,7 +569,7 @@ public class BaseService<T extends BaseEntity> {
 		var joinedIds = joiner.toString();
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s in %s", this.tableName, this.idAccess, joinedIds));
-			Utilities.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
+			loggingModule.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
@@ -583,7 +609,7 @@ public class BaseService<T extends BaseEntity> {
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
-			Utilities.logf("%s successfully deleted!", this.type.getSimpleName());
+			loggingModule.logf("%s successfully deleted!", this.type.getSimpleName());
 		}
 	}
 
@@ -597,7 +623,7 @@ public class BaseService<T extends BaseEntity> {
 	public void truncateTable() throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("truncate table `%s`;", this.tableName));
-			Utilities.logf("Table %s was successfully truncated.", this.tableName);
+			loggingModule.logf("Table %s was successfully truncated.", this.tableName);
 		}
 	}
 
@@ -619,9 +645,24 @@ public class BaseService<T extends BaseEntity> {
 	 * @return An INSERT statement up to the VALUES keyword.
 	 */
 	private StringBuilder createInsertHeader() {
-		return new StringBuilder("insert into `").append(this.tableName).append("` ").append(Utilities.getEntityFields(this.type)
-				.stream().map(field -> String.format("`%s`", Utilities.getColumnName(field)))
+		return new StringBuilder("insert into `").append(this.tableName).append("` ").append(fieldModule.getEntityFields(this.type)
+				.stream().map(field -> String.format("`%s`", tableModule.getColumnName(field)))
 				.collect(Collectors.joining(", ", "(", ")"))).append(" values ");
+	}
+
+	/**
+	 * Gets a field value from an entity and handles the checked exception.
+	 *
+	 * @param entityField    The field to get the value for.
+	 * @param entityInstance The entity to get the value from.
+	 * @return The value of the field in the entity.
+	 */
+	private Object getFieldValue(Field entityField, T entityInstance) {
+		try {
+			return entityField.get(entityInstance);
+		} catch (IllegalAccessException e) {
+			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
+		}
 	}
 
 	/**
@@ -632,11 +673,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A {@code String} representing the SQL value of the entity field.
 	 */
 	private String getSqlValue(Field entityField, T entityInstance) {
-		try {
-			return convertToSql(entityField.get(entityInstance));
-		} catch (IllegalAccessException e) {
-			throw new IllegalEntityFieldAccessException(entityField.getName(), this.type.getSimpleName(), e.getMessage());
-		}
+		return convertToSql(getFieldValue(entityField, entityInstance));
 	}
 
 	/**
@@ -661,17 +698,17 @@ public class BaseService<T extends BaseEntity> {
 
 		if (value instanceof LocalDateTime) {
 			var dateTime = (LocalDateTime) value;
-			return "'" + dateTimeFormatter.format(dateTime) + "'";
+			return "'" + DATE_TIME_FORMATTER.format(dateTime) + "'";
 		}
 
 		if (value instanceof LocalDate) {
 			var date = (LocalDate) value;
-			return "'" + dateFormatter.format(date) + "'";
+			return "'" + DATE_FORMATTER.format(date) + "'";
 		}
 
 		if (value instanceof LocalTime) {
 			var time = (LocalTime) value;
-			return "'" + timeFormatter.format(time) + "'";
+			return "'" + TIME_FORMATTER.format(time) + "'";
 		}
 
 		return value.toString();
@@ -684,7 +721,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entriesPerPage The number of entries to be displayed on each page.
 	 * @return A list of queries containing the definitions for getting specific pages.
 	 */
-	private List<Query<T>> createPaginationQueries(int entriesPerPage) {
+	private List<EntityQuery<T>> createPaginationQueries(int entriesPerPage) {
 		return createPaginationQueries(x -> true, entriesPerPage);
 	}
 
@@ -695,10 +732,10 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entriesPerPage The number of entries to be displayed on each page.
 	 * @return A list of queries containing the definitions for getting specific pages.
 	 */
-	private List<Query<T>> createPaginationQueries(SqlPredicate<T> predicate, int entriesPerPage) {
+	private List<EntityQuery<T>> createPaginationQueries(SqlPredicate<T> predicate, int entriesPerPage) {
 		var count = this.count(predicate);
 		var numberOfPages = Math.ceil(count / (double) entriesPerPage);
-		var queries = new ArrayList<Query<T>>((int) numberOfPages);
+		var queries = new ArrayList<EntityQuery<T>>((int) numberOfPages);
 		for (int i = 0; i < numberOfPages; i++) {
 			var offset = i * entriesPerPage;
 			//TODO Refactor the limit-offset-combo for performance in bigger data sets.

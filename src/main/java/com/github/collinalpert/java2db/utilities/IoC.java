@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.utilities;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.IMapper;
+import com.github.collinalpert.java2db.mappers.Mappable;
 import com.github.collinalpert.java2db.services.BaseService;
 
 import java.lang.reflect.InvocationTargetException;
@@ -17,7 +17,7 @@ import java.util.Map;
 public final class IoC {
 
 	private static Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
-	private static Map<Class<? extends BaseEntity>, IMapper<? extends BaseEntity>> mappers;
+	private static Map<Class<? extends BaseEntity>, Mappable<? extends BaseEntity>> mappers;
 
 
 	static {
@@ -71,12 +71,12 @@ public final class IoC {
 	 * @return The previously registered instance of a service class.
 	 */
 	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> IMapper<E> resolveMapper(Class<E> clazz) {
+	public static <E extends BaseEntity> Mappable<E> resolveMapper(Class<E> clazz) {
 		if (!mappers.containsKey(clazz)) {
 			throw new IllegalArgumentException(String.format("An instance of a mapper for the entity %s has not been registered yet. Please use the \"registerMapper\" method.", clazz.getSimpleName()));
 		}
 
-		return (IMapper<E>) mappers.get(clazz);
+		return (Mappable<E>) mappers.get(clazz);
 	}
 
 	/**
@@ -89,9 +89,9 @@ public final class IoC {
 	 * @return The mapper for the entity. If is does not exists, the default mapper is returned.
 	 */
 	@SuppressWarnings("unchecked")
-	public static <E extends BaseEntity> IMapper<E> resolveMapper(Class<E> clazz, IMapper<E> defaultMapper) {
+	public static <E extends BaseEntity> Mappable<E> resolveMapper(Class<E> clazz, Mappable<E> defaultMapper) {
 		if (mappers.containsKey(clazz)) {
-			return (IMapper<E>) mappers.get(clazz);
+			return (Mappable<E>) mappers.get(clazz);
 		}
 
 		registerMapper(clazz, defaultMapper);
@@ -155,7 +155,7 @@ public final class IoC {
 	 * @param <E>    The type of the entity.
 	 * @param <M>    The type of the mapper class.
 	 */
-	public static <E extends BaseEntity, M extends IMapper<E>> void registerMapper(Class<E> clazz, M mapper) {
+	public static <E extends BaseEntity, M extends Mappable<E>> void registerMapper(Class<E> clazz, M mapper) {
 		mappers.put(clazz, mapper);
 	}
 

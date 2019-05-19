@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionDeletableEntity;
-import com.github.collinalpert.java2db.queries.Query;
+import com.github.collinalpert.java2db.queries.EntityQuery;
 
 import java.util.Optional;
 
@@ -30,7 +30,7 @@ public class BaseCodeAndDescriptionDeletableService<T extends BaseCodeAndDescrip
 	 * @param description The description to get the results by.
 	 * @return A list of entities matching a certain description.
 	 */
-	public Query<T> getByDescription(String description) {
+	public EntityQuery<T> getByDescription(String description) {
 		return getMultiple(x -> x.getDescription() == description);
 	}
 }

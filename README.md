@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>4.1.1</version>
+    <version>4.2</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -116,7 +116,7 @@ To achieve asynchronous behavior, please read the [Asynchronous operations](#asy
 
 #### Read
 The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream` or `toArray` methods. You should only need this approach seldomly.\
-Much rather, use the `getSingle` or `getMultiple` methods. `getMultiple` returns a `Query` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `Query` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
+Much rather, use the `getSingle` or `getMultiple` methods. `getMultiple` returns an `EntityQuery` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `EntityQuery` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
 As previously mentioned, to execute the query and retrieve a result, use the `toList`, `toStream` or `toArray` methods.
 
 #### Update
@@ -138,6 +138,11 @@ It is also possible to achieve `LIKE` operations using the String `startsWith`, 
 
 ### Counting
 For counting functionality, the `BaseService` provides a `count` method. You can use it to either count all rows in a table, or to count all rows which match a certain condition. E.g. `personService.count()` would return the total number of people while `personService.count(person -> person.getAge() >= 50)` would return the amount of people that are of age 50 and older in your table.
+
+### Projections
+If you would not like to fetch an entire entity from the database, when building a query, you can project to a single column by using the ```project()``` method. 
+You then have option to choose the form in which the data should be fetched, as you would normally specify when executing a built entity query. 
+For example, we only want the names of all people older than 40 in the shape of an array. The corresponding statement would look something like this: ```personService.getMultiple(p -> p.getAge() > 40).project(Person::getName).toArray()```.
 
 ### Existential conditions
 If you would like to check if a certain record exists in a table, you can use the `any` method provided by the `BaseService`.\
@@ -199,6 +204,11 @@ public class Person extends BaseEntity {
     private MoodTypes moodType;
 }
 ``` 
+
+### Default database values
+If you would like to use the database-set default value for POJO fields which are null when creating or modifying data on the database, you need to annotate the specific field with the ```DefaultIfNull``` annotation. 
+You then have the additional option to specify if this behavior should occur on create or update statements, or both. 
+When the annotation is specified, per default the default database value is used on create statements, but not on update ones. 
 
 ### Column name deviations
 To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.

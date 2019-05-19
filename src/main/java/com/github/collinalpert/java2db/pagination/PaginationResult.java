@@ -1,8 +1,8 @@
 package com.github.collinalpert.java2db.pagination;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.queries.EntityQuery;
 import com.github.collinalpert.java2db.queries.OrderTypes;
-import com.github.collinalpert.java2db.queries.Query;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 import java.util.List;
@@ -17,11 +17,11 @@ import java.util.stream.Stream;
  */
 public class PaginationResult<T extends BaseEntity> {
 
-	protected final List<Query<T>> queries;
+	protected final List<EntityQuery<T>> queries;
 	private SqlFunction<T, ?>[] orderFunctions;
 	private OrderTypes orderType;
 
-	public PaginationResult(List<Query<T>> queries) {
+	public PaginationResult(List<EntityQuery<T>> queries) {
 		this.queries = queries;
 	}
 

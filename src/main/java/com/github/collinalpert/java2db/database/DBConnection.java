@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.database;
 
 import com.github.collinalpert.java2db.exceptions.ConnectionFailedException;
-import com.github.collinalpert.java2db.utilities.Utilities;
+import com.github.collinalpert.java2db.modules.LoggingModule;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
@@ -17,6 +17,11 @@ import java.sql.Statement;
  * @see <a href="https://github.com/CollinAlpert/APIs/blob/master/de/collin/DBConnection.java">GitHub</a>
  */
 public class DBConnection implements Closeable {
+
+	/**
+	 * The logger used to log queries and messages to the console.
+	 */
+	private static final LoggingModule loggingModule;
 
 	/**
 	 * Specifies the hostname/ip address of the database.
@@ -51,6 +56,7 @@ public class DBConnection implements Closeable {
 
 	static {
 		DriverManager.setLoginTimeout(5);
+		loggingModule = new LoggingModule();
 	}
 
 	private Connection connection;
@@ -58,9 +64,11 @@ public class DBConnection implements Closeable {
 
 	public DBConnection() {
 		try {
-			String connectionString = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DATABASE + "?serverTimezone=UTC";
+			var connectionString = String.format("jdbc:mysql://%s:%d/%s?serverTimezone=UTC", HOST, PORT, DATABASE);
 			Class.forName("com.mysql.cj.jdbc.Driver");
-			connection = DriverManager.getConnection(connectionString, USERNAME, PASSWORD);
+			System.setProperty("user", USERNAME);
+			System.setProperty("password", PASSWORD);
+			connection = DriverManager.getConnection(connectionString, System.getProperties());
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {
 			isConnectionValid = false;
@@ -89,8 +97,8 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public ResultSet execute(String query) throws SQLException {
-		Statement statement = connection.createStatement();
-		Utilities.log(query);
+		Statement statement = this.connection.createStatement();
+		loggingModule.log(query);
 		var set = statement.executeQuery(query);
 		statement.closeOnCompletion();
 		return set;
@@ -105,12 +113,12 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public ResultSet execute(String query, Object... params) throws SQLException {
-		var statement = connection.prepareStatement(query);
+		var statement = this.connection.prepareStatement(query);
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
 
-		Utilities.log(query);
+		loggingModule.log(query);
 		var set = statement.executeQuery();
 		statement.closeOnCompletion();
 		return set;
@@ -124,8 +132,8 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public long update(String query) throws SQLException {
-		var statement = connection.createStatement();
-		Utilities.log(query);
+		var statement = this.connection.createStatement();
+		loggingModule.log(query);
 		statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
 		return updateHelper(statement);
 	}
@@ -139,12 +147,12 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public long update(String query, Object... params) throws SQLException {
-		var statement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+		var statement = this.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
 
-		Utilities.log(query);
+		loggingModule.log(query);
 		statement.executeUpdate();
 		return updateHelper(statement);
 	}
@@ -167,10 +175,10 @@ public class DBConnection implements Closeable {
 	 */
 	public boolean isOpen() {
 		try {
-			return !connection.isClosed();
+			return !this.connection.isClosed();
 		} catch (SQLException e) {
 			System.err.println("Could not determine connection status");
-			return isConnectionValid = false;
+			return this.isConnectionValid = false;
 		}
 	}
 
@@ -180,14 +188,14 @@ public class DBConnection implements Closeable {
 	@Override
 	public void close() {
 		try {
-			if (connection != null) {
-				connection.close();
+			if (this.connection != null) {
+				this.connection.close();
 			}
 		} catch (SQLException e) {
 			System.err.println("Could not close database connection");
 			e.printStackTrace();
 		} finally {
-			isConnectionValid = false;
+			this.isConnectionValid = false;
 		}
 	}
 }

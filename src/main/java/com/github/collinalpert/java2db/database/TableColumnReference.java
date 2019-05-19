@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.database;
 
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
-import com.github.collinalpert.java2db.utilities.Utilities;
+import com.github.collinalpert.java2db.modules.TableModule;
 
 import java.lang.reflect.Field;
 
@@ -11,6 +11,12 @@ import java.lang.reflect.Field;
  * @author Collin Alpert
  */
 public class TableColumnReference {
+
+	private static final TableModule tableModule;
+
+	static {
+		tableModule = new TableModule();
+	}
 
 	/**
 	 * The table name of this reference.
@@ -53,11 +59,11 @@ public class TableColumnReference {
 	}
 
 	public String getSQLNotation() {
-		return String.format("`%s`.`%s`", getIdentifier(), Utilities.getColumnName(column));
+		return String.format("`%s`.`%s`", getIdentifier(), tableModule.getColumnName(column));
 	}
 
 	public String getAliasNotation() {
-		return getIdentifier() + "_" + Utilities.getColumnName(column);
+		return getIdentifier() + "_" + tableModule.getColumnName(column);
 	}
 
 	public boolean isForeignKey() {

@@ -3,7 +3,7 @@ package com.github.collinalpert.java2db.pagination;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.modules.CachingModule;
 import com.github.collinalpert.java2db.modules.LazyModule;
-import com.github.collinalpert.java2db.queries.Query;
+import com.github.collinalpert.java2db.queries.EntityQuery;
 
 import java.time.Duration;
 import java.util.List;
@@ -23,7 +23,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	private final Duration cacheExpiration;
 
 	/**
-	 * The caching module for {@link Stream} results.
+	 * The caching module for {@link List} results.
 	 */
 	private final LazyModule<CachingModule<List<T>>> listCache;
 
@@ -44,7 +44,7 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	 * @param queries         The queries that represent the operations of retrieving specific pages from the database.
 	 * @param cacheExpiration The duration a query result is valid for in the cache.
 	 */
-	public CacheablePaginationResult(List<Query<T>> queries, Duration cacheExpiration) {
+	public CacheablePaginationResult(List<EntityQuery<T>> queries, Duration cacheExpiration) {
 		super(queries);
 		this.cacheExpiration = cacheExpiration;
 		this.listCache = new LazyModule<>(CachingModule::new);
