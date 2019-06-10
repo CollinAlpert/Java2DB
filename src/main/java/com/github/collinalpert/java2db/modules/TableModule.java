@@ -12,10 +12,21 @@ import java.lang.reflect.Field;
  */
 public class TableModule {
 
+	private static final TableModule instance;
+
 	private static final AnnotationModule annotationModule;
 
 	static {
-		annotationModule = new AnnotationModule();
+		instance = new TableModule();
+
+		annotationModule = AnnotationModule.getInstance();
+	}
+
+	private TableModule() {
+	}
+
+	public static TableModule getInstance() {
+		return instance;
 	}
 
 	/**

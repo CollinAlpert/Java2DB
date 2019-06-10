@@ -22,10 +22,10 @@ import java.util.StringJoiner;
  */
 public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseService<T> {
 
-	private static final LoggingModule loggingModule;
+	private static final LoggingModule logger;
 
 	static {
-		loggingModule = new LoggingModule();
+		logger = LoggingModule.getInstance();
 	}
 
 	private final SqlFunction<T, Boolean> isDeletedFunc = BaseDeletableEntity::isDeleted;
@@ -68,7 +68,7 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		var joinedIds = joiner.toString();
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("update `%s` set %s = 1 where `%s`.`id` in %s", this.tableName, Lambda2Sql.toSql(this.isDeletedFunc, this.tableName), this.tableName, joinedIds));
-			loggingModule.logf("%s with ids %s successfully soft deleted!", this.type.getSimpleName(), joinedIds);
+			logger.logf("%s with ids %s successfully soft deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
@@ -111,7 +111,7 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		var query = String.format("update %s set %s = 1 where %s", super.tableName, Lambda2Sql.toSql(this.isDeletedFunc, super.tableName), Lambda2Sql.toSql(predicate));
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			loggingModule.logf("%s successfully soft deleted!", this.type.getSimpleName());
+			logger.logf("%s successfully soft deleted!", this.type.getSimpleName());
 		}
 	}
 }

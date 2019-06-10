@@ -2,7 +2,9 @@ package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.queries.OrderTypes;
-import com.github.collinalpert.java2db.utilities.CallbackUtils;
+import com.github.collinalpert.java2db.queries.async.AsyncEntityQuery;
+import com.github.collinalpert.java2db.queries.async.AsyncSingleEntityQuery;
+import com.github.collinalpert.java2db.utilities.FunctionUtils;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
@@ -35,7 +37,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #create(BaseEntity)
 	 */
 	public CompletableFuture<Void> createAsync(T instance) {
-		return createAsync(instance, CallbackUtils.empty());
+		return createAsync(instance, FunctionUtils.empty());
 	}
 
 	/**
@@ -187,16 +189,40 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 
 	//region Query
 
+	protected AsyncEntityQuery<T> createAsyncQuery() {
+		return new AsyncEntityQuery<>(super.type);
+	}
+
+	protected AsyncSingleEntityQuery<T> createAsyncSingleQuery() {
+		return new AsyncSingleEntityQuery<>(super.type);
+	}
+
 	/**
-	 * The asynchronous version of the {@link #getSingle(SqlPredicate)} method.
+	 * The asynchronous version of the {@link #getFirst(SqlPredicate)} method.
 	 *
 	 * @param predicate The condition to get the result by.
 	 * @param callback  The action to apply to the result, once it is computed.
 	 * @return A {@link CompletableFuture} which represents the asynchronous operation.
-	 * @see #getSingle(SqlPredicate)
+	 * @see #getFirst(SqlPredicate)
 	 */
-	public CompletableFuture<Void> getSingleAsync(SqlPredicate<T> predicate, Consumer<? super Optional<T>> callback) {
-		return CompletableFuture.supplyAsync(() -> super.getSingle(predicate)).thenAcceptAsync(callback);
+	public CompletableFuture<Void> getFirstAsync(SqlPredicate<T> predicate, Consumer<? super Optional<T>> callback) {
+		return CompletableFuture.supplyAsync(() -> super.getFirst(predicate)).thenAcceptAsync(callback);
+	}
+
+	@Override
+	public AsyncSingleEntityQuery<T> getSingle(SqlPredicate<T> predicate) {
+		return createAsyncSingleQuery().where(predicate);
+	}
+
+	/**
+	 * Retrieves list of entities which match the predicate.
+	 *
+	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL statement.
+	 * @return A list of entities matching the result of the query.
+	 */
+	@Override
+	public AsyncEntityQuery<T> getMultiple(SqlPredicate<T> predicate) {
+		return createAsyncQuery().where(predicate);
 	}
 
 	/**
@@ -208,7 +234,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #getById(long)
 	 */
 	public CompletableFuture<Void> getByIdAsync(long id, Consumer<? super Optional<T>> callback) {
-		return getSingleAsync(x -> x.getId() == id, callback);
+		return getSingle(x -> x.getId() == id).firstAsync(callback);
 	}
 
 	/**
@@ -219,7 +245,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #getAll()
 	 */
 	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback) {
-		return createQuery().toListAsync(callback);
+		return createAsyncQuery().toListAsync(callback);
 	}
 
 	/**
@@ -231,7 +257,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #getAll(SqlFunction)
 	 */
 	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, SqlFunction<T, ?> orderBy) {
-		return createQuery().orderBy(orderBy).toListAsync(callback);
+		return createAsyncQuery().orderBy(orderBy).toListAsync(callback);
 	}
 
 	/**
@@ -257,7 +283,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 * @see #getAll(OrderTypes, SqlFunction)
 	 */
 	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, OrderTypes sortingType, SqlFunction<T, ?> orderBy) {
-		return createQuery().orderBy(sortingType, orderBy).toListAsync(callback);
+		return createAsyncQuery().orderBy(sortingType, orderBy).toListAsync(callback);
 	}
 
 	/**
@@ -271,7 +297,7 @@ public class AsyncBaseService<T extends BaseEntity> extends BaseService<T> {
 	 */
 	@SuppressWarnings("unchecked")
 	public CompletableFuture<Void> getAllAsync(Consumer<? super List<T>> callback, OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
-		return createQuery().orderBy(sortingType, orderBy).toListAsync(callback);
+		return createAsyncQuery().orderBy(sortingType, orderBy).toListAsync(callback);
 	}
 
 	//endregion

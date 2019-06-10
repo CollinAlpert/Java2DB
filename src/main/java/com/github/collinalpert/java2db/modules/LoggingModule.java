@@ -9,6 +9,19 @@ import com.github.collinalpert.java2db.database.DBConnection;
  */
 public class LoggingModule {
 
+	private static final LoggingModule instance;
+
+	static {
+		instance = new LoggingModule();
+	}
+
+	private LoggingModule() {
+	}
+
+	public static LoggingModule getInstance() {
+		return instance;
+	}
+
 	/**
 	 * Prints messages to the query, while considering the {@link DBConnection#LOG_QUERIES} constant.
 	 *

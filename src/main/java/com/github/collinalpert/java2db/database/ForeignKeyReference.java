@@ -1,52 +1,46 @@
 package com.github.collinalpert.java2db.database;
 
+import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
+
+import java.lang.reflect.Field;
+
 /**
- * Describes a foreign key reference to a specific table.
+ * Describes a foreign key reference to a specific table. This represents a field marked with the {@link com.github.collinalpert.java2db.annotations.ForeignKeyEntity} attribute.
  *
  * @author Collin Alpert
  */
-public class ForeignKeyReference {
-
-	/**
-	 * The table the foreign key column is in.
-	 */
-	private final String parentClass;
-
-	/**
-	 * The foreign key column.
-	 */
-	private final String parentForeignKey;
+public class ForeignKeyReference extends TableColumnReference {
 
 	/**
 	 * The table the foreign key refers to.
 	 */
-	private final String childTable;
-
+	private final String foreignKeyTableName;
 	/**
-	 * An alias for the joining table.
+	 * The name of the column which references the foreign table. Not to be confused with the column in the foreign table.
 	 */
-	private final String alias;
+	private final String foreignKeyColumnName;
+	/**
+	 * An alias for the foreign key table name.
+	 */
+	private String foreignKeyAlias;
 
-	public ForeignKeyReference(String parentClass, String parentForeignKey, String childTable, String alias) {
-		this.parentClass = parentClass;
-		this.parentForeignKey = parentForeignKey;
-		this.childTable = childTable;
-		this.alias = alias;
+
+	public ForeignKeyReference(String tableName, String alias, Field column, String foreignKeyTableName, String foreignKeyAlias) {
+		super(tableName, alias, column);
+		this.foreignKeyTableName = foreignKeyTableName;
+		this.foreignKeyColumnName = column.getAnnotation(ForeignKeyEntity.class).value();
+		this.foreignKeyAlias = foreignKeyAlias;
 	}
 
-	public String getParentClass() {
-		return parentClass;
+	public String getForeignKeyTableName() {
+		return foreignKeyTableName;
 	}
 
-	public String getParentForeignKey() {
-		return parentForeignKey;
+	public String getForeignKeyColumnName() {
+		return foreignKeyColumnName;
 	}
 
-	public String getChildTable() {
-		return childTable;
-	}
-
-	public String getAlias() {
-		return alias;
+	public String getForeignKeyAlias() {
+		return foreignKeyAlias;
 	}
 }

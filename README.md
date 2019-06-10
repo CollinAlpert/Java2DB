@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>4.2</version>
+    <version>5.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -158,7 +158,7 @@ To use the asynchronous methods with your service classes, the individual servic
 `AsyncBaseService`. You wil find all the methods that the `BaseService` has plus every method with an `Async` suffix. 
 That is the asynchronous version.\
 The asynchronous versions of methods which have a return value, e.g. `create`, `count` or `any`, accept a `Consumer` which defines an action for the value once it is computed asynchronously. 
-If you do not wish to use the computed value, e.g. for the `create` method, the `CallbackUtils` class offers an `empty()` method, which returns an empty `Consumer` that just does nothing. 
+If you do not wish to use the computed value, the `FunctionUtils` class offers an `empty()` method, which returns an empty `Consumer` that just does nothing. 
 Use this as an argument in the asynchronous methods, when needed.
 
 ### Enums for static values
@@ -231,6 +231,7 @@ public class Person extends BaseEntity {
 	// Getters and setters...
 }
 ```
+It is a currently known issue that using the getter of a deviated field (in this case the "gender" field) inside a query condition doesn't work. Please issue a feature request if this is absolutely needed.
 
 ### Query constraints
 Java2DB offers full support for default query constraints.\
@@ -287,7 +288,7 @@ These two extended options are also available in combination with each other.
 ### Custom mapping
 
 This is an advanced feature and completely optional.\
-You can define your own mappings by implementing the `IMapper` interface and registering your custom mapper with the `IoC.registerMapper` method. When you register a mapper, it will be used when mapping the database result into POJOs.
+You can define your own mappings by implementing the `Mappable` interface and registering your custom mapper with the `IoC.registerMapper` method. When you register a mapper, it will be used when mapping the database result into POJOs.
 
 ### Following the singleton pattern for services
 This feature is also optional and solely exists to promote good programming practice.\

@@ -2,22 +2,16 @@ package com.github.collinalpert.java2db.queries;
 
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.database.DBConnection;
-import com.github.collinalpert.java2db.database.ForeignKeyReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.Mappable;
-import com.github.collinalpert.java2db.modules.FieldModule;
-import com.github.collinalpert.java2db.modules.TableModule;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
-import com.trigersoft.jaque.expression.LambdaExpression;
 
 import java.lang.reflect.Array;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.stream.Stream;
 
@@ -27,19 +21,10 @@ import java.util.stream.Stream;
  *
  * @author Collin Alpert
  */
-public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
+public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> implements Queryable<E> {
 
-	private static final TableModule tableModule;
-
-	static {
-		tableModule = new TableModule();
-	}
-
-	private final Class<E> type;
-	private final Mappable<E> mapper;
-	private SqlPredicate<E> whereClause;
-	private SqlFunction<E, ?>[] orderByClause;
-	private OrderTypes orderType;
+	protected OrderTypes orderType = OrderTypes.ASCENDING;
+	private List<SqlFunction<E, ?>> orderByClause;
 	private Integer limit;
 	private int limitOffset;
 
@@ -47,12 +32,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 * Constructor for creating a DQL statement for a given entity.
 	 * This constructor should not be used directly, but through the DQL methods defined in the {@link com.github.collinalpert.java2db.services.BaseService}.
 	 *
-	 * @param type   The entity to query.
-	 * @param mapper The mapper for mapping entities.
+	 * @param type The entity to query.
 	 */
-	public EntityQuery(Class<E> type, Mappable<E> mapper) {
-		this.type = type;
-		this.mapper = mapper;
+	public EntityQuery(Class<E> type) {
+		super(type);
 	}
 
 	//region Configuration
@@ -63,8 +46,9 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 * @param predicate The predicate describing the WHERE clause.
 	 * @return This {@link EntityQuery} object, now with an (appended) WHERE clause.
 	 */
+	@Override
 	public EntityQuery<E> where(SqlPredicate<E> predicate) {
-		this.whereClause = this.whereClause == null ? predicate : this.whereClause.and(predicate);
+		super.where(predicate);
 		return this;
 	}
 
@@ -74,33 +58,91 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 * @param predicate The predicate describing the OR WHERE clause.
 	 * @return This {@link EntityQuery} object, now with an (appended) OR WHERE clause.
 	 */
+	@Override
 	public EntityQuery<E> orWhere(SqlPredicate<E> predicate) {
-		this.whereClause = this.whereClause == null ? predicate : this.whereClause.or(predicate);
+		super.orWhere(predicate);
 		return this;
 	}
 
 	/**
-	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns, if more than one is supplied.
+	 * Sets an ORDER BY clauses for the DQL statement.
 	 *
-	 * @param functions The columns to order by in a coalescing manner.
-	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 * @param function The column to order by..
+	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
-	@SafeVarargs
-	public final EntityQuery<E> orderBy(SqlFunction<E, ?>... functions) {
-		return orderBy(OrderTypes.ASCENDING, functions);
+	public EntityQuery<E> orderBy(SqlFunction<E, ?> function) {
+		if (function == null) {
+			return this;
+		}
+
+		return this.orderBy(Collections.singletonList(function));
 	}
 
 	/**
-	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns, if more than one is supplied.
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
 	 *
-	 * @param type      The type of ordering that should be applied.
 	 * @param functions The columns to order by in a coalescing manner.
 	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
 	 */
-	@SafeVarargs
-	public final EntityQuery<E> orderBy(OrderTypes type, SqlFunction<E, ?>... functions) {
+	public EntityQuery<E> orderBy(SqlFunction<E, ?>[] functions) {
+		if (functions == null) {
+			return this;
+		}
+
+		return this.orderBy(Arrays.asList(functions));
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(List<SqlFunction<E, ?>> functions) {
 		this.orderByClause = functions;
-		this.orderType = type;
+		return this;
+	}
+
+	/**
+	 * Sets an ORDER BY clauses for the DQL statement with a sorting order option.
+	 *
+	 * @param orderType The direction to order by. Can be either ascending or descending.
+	 * @param function  The column to order by.
+	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(OrderTypes orderType, SqlFunction<E, ?> function) {
+		if (function == null) {
+			return this;
+		}
+
+		return this.orderBy(orderType, Collections.singletonList(function));
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement with a sorting order option. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param orderType The direction to order by. Can be either ascending or descending.
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(OrderTypes orderType, SqlFunction<E, ?>[] functions) {
+		if (functions == null) {
+			return this;
+		}
+
+		return orderBy(orderType, Arrays.asList(functions));
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement with a sorting order option. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param orderType The direction to order by. Can be either ascending or descending.
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(OrderTypes orderType, List<SqlFunction<E, ?>> functions) {
+		this.orderType = orderType;
+		this.orderByClause = functions;
 		return this;
 	}
 
@@ -137,29 +179,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 * @return A queryable containing the projection.
 	 */
 	public <R> Queryable<R> project(SqlFunction<E, R> projection) {
-		var lambda = LambdaExpression.parse(projection);
-		@SuppressWarnings("unchecked")
-		var returnType = (Class<R>) lambda.getBody().getResultType();
-		return new EntityProjectionQuery<>(returnType, projection, this);
+		return new EntityProjectionQuery<>(projection, this);
 	}
 
 	//endregion
-
-	/**
-	 * Gets the first record of a result. This method should be used when only one record is expected, i.e. when filtering by a unique identifier such as an id.
-	 *
-	 * @return The first row as an entity wrapped in an {@link Optional} if there is at least one row.
-	 * Otherwise {@link Optional#empty()} is returned.
-	 */
-	@Override
-	public Optional<E> getFirst() {
-		try (var connection = new DBConnection()) {
-			return this.mapper.map(connection.execute(getQuery()));
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return Optional.empty();
-		}
-	}
 
 	/**
 	 * Executes the query and returns the result as a {@link List}
@@ -169,7 +192,7 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	@Override
 	public List<E> toList() {
 		try (var connection = new DBConnection()) {
-			return this.mapper.mapToList(connection.execute(getQuery()));
+			return super.mapper.mapToList(connection.execute(getQuery()), super.aliases);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();
@@ -184,7 +207,7 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	@Override
 	public Stream<E> toStream() {
 		try (var connection = new DBConnection()) {
-			return this.mapper.mapToStream(connection.execute(getQuery()));
+			return super.mapper.mapToStream(connection.execute(getQuery()), super.aliases);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Stream.empty();
@@ -200,47 +223,11 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	@SuppressWarnings("unchecked")
 	public E[] toArray() {
 		try (var connection = new DBConnection()) {
-			return this.mapper.mapToArray(connection.execute(getQuery()));
+			return super.mapper.mapToArray(connection.execute(getQuery()), super.aliases);
 		} catch (SQLException e) {
 			e.printStackTrace();
-			return (E[]) Array.newInstance(this.type, 0);
+			return (E[]) Array.newInstance(super.type, 0);
 		}
-	}
-
-	/**
-	 * Builds the query from the set query options.
-	 *
-	 * @return The DQL statement for getting data from the database.
-	 */
-	@Override
-	public String getQuery() {
-		var builder = new StringBuilder("select ");
-		var fieldList = new LinkedList<String>();
-		var foreignKeyList = new LinkedList<ForeignKeyReference>();
-		var tableName = tableModule.getTableName(this.type);
-		var fieldModule = new FieldModule();
-		var columns = fieldModule.getAllFields(this.type);
-		for (var column : columns) {
-			if (column.isForeignKey()) {
-				foreignKeyList.add(new ForeignKeyReference(
-						column.getReference(),
-						column.getColumn().getAnnotation(ForeignKeyEntity.class).value(),
-						tableModule.getTableName(column.getColumn().getType()),
-						column.getAlias()));
-				continue;
-			}
-
-			fieldList.add(String.format("%s as %s", column.getSQLNotation(), column.getAliasNotation()));
-		}
-
-		builder.append(String.join(", ", fieldList)).append(" from `").append(tableName).append("`");
-		for (var foreignKey : foreignKeyList) {
-			builder.append(" left join `").append(foreignKey.getChildTable()).append("` ").append(foreignKey.getAlias()).append(" on `").append(foreignKey.getParentClass()).append("`.`").append(foreignKey.getParentForeignKey()).append("` = `").append(foreignKey.getAlias()).append("`.`id`");
-		}
-
-		builder.append(generateQueryClauses(tableName));
-
-		return builder.toString();
 	}
 
 	/**
@@ -249,23 +236,17 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 * @param tableName The table name which is targeted.
 	 * @return A string containing the clauses which can then be appended to the end of a DQL statement.
 	 */
-	public String generateQueryClauses(String tableName) {
+	@Override
+	String getQueryClauses(String tableName) {
 		var builder = new StringBuilder();
 
-		var constraints = QueryConstraints.getConstraints(this.type);
-		var clauseCopy = this.whereClause;
-		if (clauseCopy == null) {
-			clauseCopy = constraints;
-		} else {
-			clauseCopy = clauseCopy.and(constraints);
-		}
+		buildWhereClause(builder, tableName);
 
-		builder.append(" where ").append(Lambda2Sql.toSql(clauseCopy, tableName));
-		if (this.orderByClause != null && this.orderByClause.length > 0) {
+		if (this.orderByClause != null && this.orderByClause.size() > 0) {
 			builder.append(" order by ");
 
-			if (this.orderByClause.length == 1) {
-				builder.append(Lambda2Sql.toSql(this.orderByClause[0], tableName));
+			if (this.orderByClause.size() == 1) {
+				builder.append(Lambda2Sql.toSql(this.orderByClause.get(0), tableName));
 			} else {
 				var joiner = new StringJoiner(", ", "coalesce(", ")");
 				for (SqlFunction<E, ?> orderByFunction : this.orderByClause) {
@@ -283,14 +264,5 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 		}
 
 		return builder.toString();
-	}
-
-	/**
-	 * Gets the table name which this query targets.
-	 *
-	 * @return The table name which this query targets.
-	 */
-	public String getTableName() {
-		return tableModule.getTableName(this.type);
 	}
 }

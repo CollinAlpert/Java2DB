@@ -21,7 +21,7 @@ public class BaseCodeAndDescriptionDeletableService<T extends BaseCodeAndDescrip
 	 * @return An entity matching this code. It is assumed that a code, just like the id, is unique in a table.
 	 */
 	public Optional<T> getByCode(String code) {
-		return getSingle(x -> x.getCode() == code);
+		return getFirst(x -> x.getCode() == code);
 	}
 
 	/**

@@ -11,6 +11,19 @@ import java.util.function.Function;
  */
 public class AnnotationModule {
 
+	private static final AnnotationModule instance;
+
+	static {
+		instance = new AnnotationModule();
+	}
+
+	private AnnotationModule() {
+	}
+
+	public static AnnotationModule getInstance() {
+		return instance;
+	}
+
 	/**
 	 * Checks if a field was annotated with a specific annotation.
 	 *

@@ -4,8 +4,6 @@ import com.github.collinalpert.java2db.annotations.DefaultIfNull;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
-import com.github.collinalpert.java2db.mappers.BaseMapper;
-import com.github.collinalpert.java2db.mappers.Mappable;
 import com.github.collinalpert.java2db.modules.AnnotationModule;
 import com.github.collinalpert.java2db.modules.FieldModule;
 import com.github.collinalpert.java2db.modules.LoggingModule;
@@ -14,7 +12,7 @@ import com.github.collinalpert.java2db.pagination.CacheablePaginationResult;
 import com.github.collinalpert.java2db.pagination.PaginationResult;
 import com.github.collinalpert.java2db.queries.EntityQuery;
 import com.github.collinalpert.java2db.queries.OrderTypes;
-import com.github.collinalpert.java2db.utilities.IoC;
+import com.github.collinalpert.java2db.queries.SingleEntityQuery;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
@@ -50,13 +48,13 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * The logger used to log queries and messages to the console.
 	 */
-	private static final LoggingModule loggingModule;
+	private static final LoggingModule logger;
 
 	static {
-		annotationModule = new AnnotationModule();
-		fieldModule = new FieldModule();
-		tableModule = new TableModule();
-		loggingModule = new LoggingModule();
+		annotationModule = AnnotationModule.getInstance();
+		fieldModule = FieldModule.getInstance();
+		tableModule = TableModule.getInstance();
+		logger = LoggingModule.getInstance();
 	}
 
 	/**
@@ -71,11 +69,6 @@ public class BaseService<T extends BaseEntity> {
 	protected final String tableName;
 
 	/**
-	 * The mapper used for mapping database objects to Java entities in this service.
-	 */
-	protected final Mappable<T> mapper;
-
-	/**
 	 * Represents the id column being accessed.
 	 */
 	private final String idAccess;
@@ -85,7 +78,6 @@ public class BaseService<T extends BaseEntity> {
 	 */
 	protected BaseService() {
 		this.type = getGenericType();
-		this.mapper = IoC.resolveMapper(this.type, new BaseMapper<>(this.type));
 		this.tableName = tableModule.getTableName(this.type);
 
 		final SqlFunction<T, Long> idFunc = BaseEntity::getId;
@@ -120,7 +112,7 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(joiner.toString());
 		try (var connection = new DBConnection()) {
 			var id = connection.update(insertQuery.toString());
-			loggingModule.logf("%s successfully created!", this.type.getSimpleName());
+			logger.logf("%s successfully created!", this.type.getSimpleName());
 			return id;
 		}
 	}
@@ -177,7 +169,7 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(String.join(", ", rows));
 		try (var connection = new DBConnection()) {
 			connection.update(insertQuery.toString());
-			loggingModule.logf("%s entities were successfully created.", this.type.getSimpleName());
+			logger.logf("%s entities were successfully created.", this.type.getSimpleName());
 		}
 	}
 
@@ -284,7 +276,16 @@ public class BaseService<T extends BaseEntity> {
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected EntityQuery<T> createQuery() {
-		return new EntityQuery<>(this.type, this.mapper);
+		return new EntityQuery<>(this.type);
+	}
+
+	/**
+	 * @return a {@link SingleEntityQuery} object with which a DQL statement can be built, which returns a single record.
+	 * If you do not require a plain {@link SingleEntityQuery}, please consider using the
+	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
+	 */
+	protected SingleEntityQuery<T> createSingleQuery() {
+		return new SingleEntityQuery<>(this.type);
 	}
 
 	/**
@@ -293,8 +294,18 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL query.
 	 * @return An entity matching the result of the query.
 	 */
-	public Optional<T> getSingle(SqlPredicate<T> predicate) {
-		return createQuery().where(predicate).getFirst();
+	public Optional<T> getFirst(SqlPredicate<T> predicate) {
+		return createSingleQuery().where(predicate).first();
+	}
+
+	/**
+	 * Retrieves a single entity which matches the predicate.
+	 *
+	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL query.
+	 * @return An entity matching the result of the query.
+	 */
+	public SingleEntityQuery<T> getSingle(SqlPredicate<T> predicate) {
+		return createSingleQuery().where(predicate);
 	}
 
 	/**
@@ -312,7 +323,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return Gets an entity by its id.
 	 */
 	public Optional<T> getById(long id) {
-		return getSingle(x -> x.getId() == id);
+		return getFirst(x -> x.getId() == id);
 	}
 
 	/**
@@ -338,8 +349,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param orderBy The properties to order by.
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
-	@SuppressWarnings("unchecked")
-	public List<T> getAll(SqlFunction<T, ?>... orderBy) {
+	public List<T> getAll(SqlFunction<T, ?>[] orderBy) {
 		return createQuery().orderBy(orderBy).toList();
 	}
 
@@ -361,8 +371,8 @@ public class BaseService<T extends BaseEntity> {
 	 * @param sortingType The order direction. Can be either ascending or descending.
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
-	@SuppressWarnings("unchecked")
-	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?>... orderBy) {
+
+	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?>[] orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).toList();
 	}
 
@@ -447,7 +457,7 @@ public class BaseService<T extends BaseEntity> {
 	public void update(T instance) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery(instance));
-			loggingModule.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
+			logger.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
 		}
 	}
 
@@ -478,7 +488,7 @@ public class BaseService<T extends BaseEntity> {
 				connection.update(updateQuery(instance));
 			}
 
-			loggingModule.logf("%s were successfully updated.", this.type.getSimpleName());
+			logger.logf("%s were successfully updated.", this.type.getSimpleName());
 		}
 	}
 
@@ -525,7 +535,7 @@ public class BaseService<T extends BaseEntity> {
 
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			loggingModule.logf("Column-specific update for table '%s' was successful.", tableModule.getTableName(this.type));
+			logger.logf("Column-specific update for table '%s' was successful.", tableModule.getTableName(this.type));
 		}
 	}
 
@@ -569,7 +579,7 @@ public class BaseService<T extends BaseEntity> {
 		var joinedIds = joiner.toString();
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s in %s", this.tableName, this.idAccess, joinedIds));
-			loggingModule.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
+			logger.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
@@ -609,7 +619,7 @@ public class BaseService<T extends BaseEntity> {
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
-			loggingModule.logf("%s successfully deleted!", this.type.getSimpleName());
+			logger.logf("%s successfully deleted!", this.type.getSimpleName());
 		}
 	}
 
@@ -623,7 +633,7 @@ public class BaseService<T extends BaseEntity> {
 	public void truncateTable() throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("truncate table `%s`;", this.tableName));
-			loggingModule.logf("Table %s was successfully truncated.", this.tableName);
+			logger.logf("Table %s was successfully truncated.", this.tableName);
 		}
 	}
 

@@ -55,4 +55,13 @@ public class QueryConstraints {
 
 		selectConstraints.put(clazz, predicate);
 	}
+
+	/**
+	 * Removes <b>all</b> query constraints which were set for a specific entity.
+	 *
+	 * @param clazz The entity class to remove the constraints for.
+	 */
+	public static void removeConstraints(Class<? extends BaseEntity> clazz) {
+		selectConstraints.remove(clazz);
+	}
 }

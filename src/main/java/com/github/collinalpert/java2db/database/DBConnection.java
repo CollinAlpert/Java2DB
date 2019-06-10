@@ -21,7 +21,7 @@ public class DBConnection implements Closeable {
 	/**
 	 * The logger used to log queries and messages to the console.
 	 */
-	private static final LoggingModule loggingModule;
+	private static final LoggingModule logger;
 
 	/**
 	 * Specifies the hostname/ip address of the database.
@@ -56,7 +56,7 @@ public class DBConnection implements Closeable {
 
 	static {
 		DriverManager.setLoginTimeout(5);
-		loggingModule = new LoggingModule();
+		logger = LoggingModule.getInstance();
 	}
 
 	private Connection connection;
@@ -98,7 +98,7 @@ public class DBConnection implements Closeable {
 	 */
 	public ResultSet execute(String query) throws SQLException {
 		Statement statement = this.connection.createStatement();
-		loggingModule.log(query);
+		logger.log(query);
 		var set = statement.executeQuery(query);
 		statement.closeOnCompletion();
 		return set;
@@ -118,7 +118,7 @@ public class DBConnection implements Closeable {
 			statement.setObject(i + 1, params[i]);
 		}
 
-		loggingModule.log(query);
+		logger.log(query);
 		var set = statement.executeQuery();
 		statement.closeOnCompletion();
 		return set;
@@ -133,7 +133,7 @@ public class DBConnection implements Closeable {
 	 */
 	public long update(String query) throws SQLException {
 		var statement = this.connection.createStatement();
-		loggingModule.log(query);
+		logger.log(query);
 		statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
 		return updateHelper(statement);
 	}
@@ -152,7 +152,7 @@ public class DBConnection implements Closeable {
 			statement.setObject(i + 1, params[i]);
 		}
 
-		loggingModule.log(query);
+		logger.log(query);
 		statement.executeUpdate();
 		return updateHelper(statement);
 	}

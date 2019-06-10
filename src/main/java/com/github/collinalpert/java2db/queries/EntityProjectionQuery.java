@@ -3,7 +3,6 @@ package com.github.collinalpert.java2db.queries;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.modules.ArrayModule;
-import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 import java.lang.reflect.Array;
@@ -11,7 +10,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -19,34 +17,14 @@ import java.util.stream.Stream;
 /**
  * A query which represents a projection from an {@link EntityQuery} to a single column on the database.
  *
+ * @param <E> The entity which the query is supposed to be executed for.
+ * @param <R> The return type of the projection this query represents.
  * @author Collin Alpert
  */
-public class EntityProjectionQuery<E extends BaseEntity, R> implements Queryable<R> {
+public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntityProjectionQuery<E, R> implements Queryable<R> {
 
-	private final Class<R> returnType;
-	private final SqlFunction<E, R> projection;
-	private final EntityQuery<E> originalQuery;
-
-	public EntityProjectionQuery(Class<R> returnType, SqlFunction<E, R> projection, EntityQuery<E> originalQuery) {
-		this.returnType = returnType;
-		this.projection = projection;
-		this.originalQuery = originalQuery;
-	}
-
-	@Override
-	public Optional<R> getFirst() {
-		try (var connection = new DBConnection();
-			 var result = connection.execute(getQuery())) {
-
-			if (result.next()) {
-				return Optional.ofNullable(result.getObject(1, this.returnType));
-			}
-
-			return Optional.empty();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return Optional.empty();
-		}
+	public EntityProjectionQuery(SqlFunction<E, R> projection, EntityQuery<E> originalQuery) {
+		super(projection, originalQuery);
 	}
 
 	@Override
@@ -63,36 +41,34 @@ public class EntityProjectionQuery<E extends BaseEntity, R> implements Queryable
 
 	@Override
 	public R[] toArray() {
-		var arrayModule = new ArrayModule<>(this.returnType, 20);
+		var arrayModule = new ArrayModule<>(super.returnType, 20);
 		@SuppressWarnings("unchecked")
-		var defaultValue = (R[]) Array.newInstance(this.returnType, 0);
+		var defaultValue = (R[]) Array.newInstance(super.returnType, 0);
 		return resultHandling(arrayModule, ArrayModule::addElement, defaultValue, ArrayModule::getArray);
 	}
 
-	private <T, D> T resultHandling(D dataType, BiConsumer<D, R> valueConsumer, T defaultValue, Function<D, T> valueMapping) {
+	/**
+	 * Performs handling on a {@code ResultSet} for different data structures.
+	 *
+	 * @param dataStructure The data structure to fill the values from the {@code ResultSet} with.
+	 * @param valueConsumer The action to perform with a retrieved value from the {@code ResultSet}.
+	 * @param defaultValue  A default value to be used in case an exception occurs.
+	 * @param valueMapping  A mapping to convert the dataStructure into the desired return type.
+	 * @param <T>           The type of the data structure which will be returned.
+	 * @param <D>           The type of the initial data structure which the {@code ResultSet} will work with.
+	 * @return A data structure containing a {@code ResultSet}s data.
+	 */
+	private <T, D> T resultHandling(D dataStructure, BiConsumer<D, R> valueConsumer, T defaultValue, Function<D, T> valueMapping) {
 		try (var connection = new DBConnection();
 			 var result = connection.execute(getQuery())) {
 			while (result.next()) {
-				valueConsumer.accept(dataType, result.getObject(1, this.returnType));
+				valueConsumer.accept(dataStructure, result.getObject(1, super.returnType));
 			}
 
-			return valueMapping.apply(dataType);
+			return valueMapping.apply(dataStructure);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return defaultValue;
 		}
-	}
-
-	@Override
-	public String getQuery() {
-		var builder = new StringBuilder("select ");
-
-		var tableName = originalQuery.getTableName();
-		var columnName = Lambda2Sql.toSql(projection, tableName);
-		builder.append(columnName).append(" from `").append(tableName).append("`");
-
-		builder.append(originalQuery.generateQueryClauses(tableName));
-
-		return builder.toString();
 	}
 }

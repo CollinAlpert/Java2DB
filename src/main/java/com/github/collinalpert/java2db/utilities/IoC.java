@@ -55,7 +55,7 @@ public final class IoC {
 	 */
 	public static <S extends BaseService> S resolveService(Class<S> clazz) {
 		var service = services.values().stream().filter(x -> x.getClass().equals(clazz)).findFirst();
-		if (!service.isPresent()) {
+		if (service.isEmpty()) {
 			throw new IllegalArgumentException(String.format("An instance of the service %s has not been registered yet. Please use the \"registerService\" method.", clazz.getSimpleName()));
 		}
 
