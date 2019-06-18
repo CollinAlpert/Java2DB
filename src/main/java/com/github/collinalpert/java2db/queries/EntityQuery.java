@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.stream.Stream;
 
@@ -178,11 +179,25 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @param <R>        The type of the column you want to retrieve.
 	 * @return A queryable containing the projection.
 	 */
+	@Override
 	public <R> Queryable<R> project(SqlFunction<E, R> projection) {
 		return new EntityProjectionQuery<>(projection, this);
 	}
 
 	//endregion
+
+
+	/**
+	 * Gets the first record of a result. This method should be used when only one record is expected, i.e. when filtering by a unique identifier such as an id.
+	 *
+	 * @return The first row as an entity wrapped in an {@link Optional} if there is at least one row.
+	 * Otherwise {@link Optional#empty()} is returned.
+	 */
+	@Override
+	public Optional<E> first() {
+		this.limit(1);
+		return super.first();
+	}
 
 	/**
 	 * Executes the query and returns the result as a {@link List}

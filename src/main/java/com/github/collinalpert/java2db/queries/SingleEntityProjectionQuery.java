@@ -16,7 +16,7 @@ public class SingleEntityProjectionQuery<E extends BaseEntity, R> implements Sin
 
 	protected final Class<R> returnType;
 	private final SqlFunction<E, R> projection;
-	private final SingleEntityQuery<E> originalQuery;
+	protected final SingleEntityQuery<E> originalQuery;
 
 	public SingleEntityProjectionQuery(SqlFunction<E, R> projection, SingleEntityQuery<E> originalQuery) {
 		var lambda = LambdaExpression.parse(projection);
@@ -50,9 +50,6 @@ public class SingleEntityProjectionQuery<E extends BaseEntity, R> implements Sin
 		builder.append(columnName).append(" from `").append(tableName).append("`");
 
 		builder.append(originalQuery.getQueryClauses(tableName));
-
-		// Since we only want to fetch one result anyway.
-		builder.append(" limit 1");
 
 		return builder.toString();
 	}

@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -25,6 +26,12 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 
 	public EntityProjectionQuery(SqlFunction<E, R> projection, EntityQuery<E> originalQuery) {
 		super(projection, originalQuery);
+	}
+
+	@Override
+	public Optional<R> first() {
+		((EntityQuery<E>) originalQuery).limit(1);
+		return super.first();
 	}
 
 	@Override
