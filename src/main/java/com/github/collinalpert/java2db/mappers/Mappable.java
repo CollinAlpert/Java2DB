@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -29,7 +30,7 @@ public interface Mappable<T extends BaseEntity> {
 	 *
 	 * @param set     The {@code ResultSet} to get the data from.
 	 * @param aliases A map of column aliases needed to retrieve column data from the {@code ResultSet}.
-	 * @return An {@code Optional} containing the {@code ResultSet}s data.
+	 * @return A {@code List} containing the {@code ResultSet}s data.
 	 * @throws SQLException In case the {@code ResultSet} can't be read.
 	 */
 	List<T> mapToList(ResultSet set, Map<String, String> aliases) throws SQLException;
@@ -39,7 +40,7 @@ public interface Mappable<T extends BaseEntity> {
 	 *
 	 * @param set     The {@code ResultSet} to get the data from.
 	 * @param aliases A map of column aliases needed to retrieve column data from the {@code ResultSet}.
-	 * @return An {@code Optional} containing the {@code ResultSet}s data.
+	 * @return A {@code Stream} containing the {@code ResultSet}s data.
 	 * @throws SQLException In case the {@code ResultSet} can't be read.
 	 */
 	Stream<T> mapToStream(ResultSet set, Map<String, String> aliases) throws SQLException;
@@ -49,8 +50,22 @@ public interface Mappable<T extends BaseEntity> {
 	 *
 	 * @param set     The {@code ResultSet} to get the data from.
 	 * @param aliases A map of column aliases needed to retrieve column data from the {@code ResultSet}.
-	 * @return An {@code Optional} containing the {@code ResultSet}s data.
+	 * @return An array containing the {@code ResultSet}s data.
 	 * @throws SQLException In case the {@code ResultSet} can't be read.
 	 */
 	T[] mapToArray(ResultSet set, Map<String, String> aliases) throws SQLException;
+
+	/**
+	 * Maps a {@code ResultSet} to a {@link Map}.
+	 *
+	 * @param set          The {@code ResultSet} to get the data from.
+	 * @param keyMapping   The key function of the map.
+	 * @param valueMapping The value function of the map.
+	 * @param aliases      A map of column aliases needed to retrieve column data from the {@code ResultSet}.
+	 * @param <K>          The type of the keys in the map.
+	 * @param <V>          The type of the values in the map.
+	 * @return A {@code Map} containing the {@code ResultSet}s data.
+	 * @throws SQLException In case the {@code ResultSet} can't be read.
+	 */
+	<K, V> Map<K, V> mapToMap(ResultSet set, Function<T, K> keyMapping, Function<T, V> valueMapping, Map<String, String> aliases) throws SQLException;
 }

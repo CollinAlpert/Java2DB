@@ -12,8 +12,10 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -68,7 +70,7 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	/**
 	 * Sets an ORDER BY clauses for the DQL statement.
 	 *
-	 * @param function The column to order by..
+	 * @param function The column to order by.
 	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
 	public EntityQuery<E> orderBy(SqlFunction<E, ?> function) {
@@ -242,6 +244,34 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return (E[]) Array.newInstance(super.type, 0);
+		}
+	}
+
+	/**
+	 * Executes a new query and returns the result as a {@link Map}. This method is equivalent to the call {@code Queryable#toMap(keyMapping, x -> x)}.
+	 *
+	 * @param keyMapping The field representing the keys of the map.
+	 * @return A map containing the result of the query.
+	 */
+	@Override
+	public <K> Map<K, E> toMap(Function<E, K> keyMapping) {
+		return this.toMap(keyMapping, x -> x);
+	}
+
+	/**
+	 * Executes a new query and returns the result as a {@link Map}.
+	 *
+	 * @param keyMapping   The field representing the keys of the map.
+	 * @param valueMapping The field representing the values of the map.
+	 * @return A map containing the result of the query.
+	 */
+	@Override
+	public <K, V> Map<K, V> toMap(Function<E, K> keyMapping, Function<E, V> valueMapping) {
+		try (var connection = new DBConnection()) {
+			return super.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping, super.aliases);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Collections.emptyMap();
 		}
 	}
 

@@ -9,7 +9,9 @@ import java.lang.reflect.Array;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -52,6 +54,41 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 		@SuppressWarnings("unchecked")
 		var defaultValue = (R[]) Array.newInstance(super.returnType, 0);
 		return resultHandling(arrayModule, ArrayModule::addElement, defaultValue, ArrayModule::getArray);
+	}
+
+	/**
+	 * Executes a new query and returns the result as a {@link Map}. This method is equivalent to the call {@code Queryable#toMap(keyMapping, x -> x)}.
+	 *
+	 * @param keyMapping The field representing the keys of the map.
+	 * @return A map containing the result of the query.
+	 */
+	@Override
+	public <K> Map<K, R> toMap(Function<R, K> keyMapping) {
+		return this.toMap(keyMapping, x -> x);
+	}
+
+	/**
+	 * Executes a new query and returns the result as a {@link Map}.
+	 *
+	 * @param keyMapping   The field representing the keys of the map.
+	 * @param valueMapping The field representing the values of the map.
+	 * @return A map containing the result of the query.
+	 */
+	@Override
+	public <K, V> Map<K, V> toMap(Function<R, K> keyMapping, Function<R, V> valueMapping) {
+		var map = new HashMap<K, V>();
+		try (var connection = new DBConnection();
+			 var result = connection.execute(getQuery())) {
+			while (result.next()) {
+				var currentValue = result.getObject(1, super.returnType);
+				map.put(keyMapping.apply(currentValue), valueMapping.apply(currentValue));
+			}
+
+			return map;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Collections.emptyMap();
+		}
 	}
 
 	/**

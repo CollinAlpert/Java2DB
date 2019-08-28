@@ -20,7 +20,6 @@ public interface AsyncSingleQueryable<T> extends SingleQueryable<T> {
 	 */
 	default CompletableFuture<Optional<T>> firstAsync() {
 		return CompletableFuture.supplyAsync(this::first);
-
 	}
 
 	/**

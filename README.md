@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>5.0.1</version>
+    <version>5.1.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -110,14 +110,15 @@ The last thing you need to do is give Java2DB access to your database. Set the s
 ### CRUD operations 
 
 #### Create
-Every service class has support for creating a single as well as multiple entities at once on the database.
+Every service class has support for creating a single as well as multiple entities at once on the database. 
+When creating a single entity, the id created for it on the database will also be set in the entity.
 Check out the different `create` methods provided by your service class.
 To achieve asynchronous behavior, please read the [Asynchronous operations](#asynchronous-operations) section.
 
 #### Read
-The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream` or `toArray` methods. You should only need this approach seldomly.\
+The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream`, `toArray` or `toMap` methods. You should only need this approach seldomly.\
 Much rather, use the `getSingle` or `getMultiple` methods. `getMultiple` returns an `EntityQuery` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `EntityQuery` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
-As previously mentioned, to execute the query and retrieve a result, use the `toList`, `toStream` or `toArray` methods.
+As previously mentioned, to execute the query and retrieve a result, use the `toList`, `toStream`, `toArray` or `toMap` methods.
 
 #### Update
 Every service class has support for updating a single as well as multiple entities at once on the database.
@@ -138,6 +139,9 @@ It is also possible to achieve `LIKE` operations using the String `startsWith`, 
 
 ### Counting
 For counting functionality, the `BaseService` provides a `count` method. You can use it to either count all rows in a table, or to count all rows which match a certain condition. E.g. `personService.count()` would return the total number of people while `personService.count(person -> person.getAge() >= 50)` would return the amount of people that are of age 50 and older in your table.
+
+### Max/Min
+To get the maximal or minimal value from a table, the ``BaseService`` provides the `max()` and `min()` methods.
 
 ### Projections
 If you would not like to fetch an entire entity from the database, when building a query, you can project to a single column by using the ```project()``` method. 

@@ -13,6 +13,7 @@ import com.github.collinalpert.java2db.pagination.PaginationResult;
 import com.github.collinalpert.java2db.queries.EntityQuery;
 import com.github.collinalpert.java2db.queries.OrderTypes;
 import com.github.collinalpert.java2db.queries.SingleEntityQuery;
+import com.github.collinalpert.java2db.utilities.FunctionUtils;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
  *
  * @author Collin Alpert
  */
-public class BaseService<T extends BaseEntity> {
+public class BaseService<E extends BaseEntity> {
 
 	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -60,7 +61,7 @@ public class BaseService<T extends BaseEntity> {
 	/**
 	 * The generic type of this service.
 	 */
-	protected final Class<T> type;
+	protected final Class<E> type;
 
 	/**
 	 * Represents the table name of the entity this services corresponds to.
@@ -80,21 +81,21 @@ public class BaseService<T extends BaseEntity> {
 		this.type = getGenericType();
 		this.tableName = tableModule.getTableName(this.type);
 
-		final SqlFunction<T, Long> idFunc = BaseEntity::getId;
+		final SqlFunction<E, Long> idFunc = BaseEntity::getId;
 		this.idAccess = Lambda2Sql.toSql(idFunc, this.tableName);
 	}
 
 	//region Create
 
 	/**
-	 * Creates this Java entity on the database.
+	 * Creates this Java entity on the database and sets the newly created id for the entity.
 	 *
 	 * @param instance The instance to create on the database.
 	 * @return The id of the newly created record.
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 */
-	public long create(T instance) throws SQLException {
+	public long create(E instance) throws SQLException {
 		var insertQuery = createInsertHeader();
 		var joiner = new StringJoiner(", ", "(", ");");
 		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
@@ -112,6 +113,7 @@ public class BaseService<T extends BaseEntity> {
 		insertQuery.append(joiner.toString());
 		try (var connection = new DBConnection()) {
 			var id = connection.update(insertQuery.toString());
+			instance.setId(id);
 			logger.logf("%s successfully created!", this.type.getSimpleName());
 			return id;
 		}
@@ -126,7 +128,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @see #create(List)
 	 */
 	@SuppressWarnings("unchecked")
-	public void create(T... instances) throws SQLException {
+	public void create(E... instances) throws SQLException {
 		create(Arrays.asList(instances));
 	}
 
@@ -139,7 +141,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 */
-	public void create(List<T> instances) throws SQLException {
+	public void create(List<E> instances) throws SQLException {
 		if (instances.isEmpty()) {
 			return;
 		}
@@ -195,7 +197,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The condition to test for.
 	 * @return The number of rows matching the condition.
 	 */
-	public long count(SqlPredicate<T> predicate) {
+	public long count(SqlPredicate<E> predicate) {
 		try (var connection = new DBConnection()) {
 			try (var result = connection.execute(String.format("select count(%s) from `%s` where %s;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
@@ -205,8 +207,7 @@ public class BaseService<T extends BaseEntity> {
 				return 0;
 			}
 		} catch (SQLException e) {
-			e.printStackTrace();
-			throw new IllegalArgumentException(String.format("Could not get amount of rows in table %s for this predicate.", this.tableName));
+			throw new IllegalArgumentException(String.format("Could not get amount of rows in table %s for this predicate.", this.tableName), e);
 		}
 	}
 
@@ -229,7 +230,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The condition to check for.
 	 * @return {@code True} if the predicate matches one or more records, {@code false} if not.
 	 */
-	public boolean any(SqlPredicate<T> predicate) {
+	public boolean any(SqlPredicate<E> predicate) {
 		try (var connection = new DBConnection()) {
 			try (var result = connection.execute(String.format("select exists(select %s from `%s` where %s limit 1) as result;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
@@ -239,8 +240,83 @@ public class BaseService<T extends BaseEntity> {
 				return false;
 			}
 		} catch (SQLException e) {
-			e.printStackTrace();
-			throw new IllegalArgumentException(String.format("Could not check if a row matches this condition on table %s.", this.tableName));
+			throw new IllegalArgumentException(String.format("Could not check if a row matches this condition on table %s.", this.tableName), e);
+		}
+	}
+
+	//endregion
+
+	//region Max
+
+	/**
+	 * Gets the maximum value of a column in a table.
+	 *
+	 * @param column The column to get the maximum value of.
+	 * @param <T>    The generic type of the column. It is also the return type.
+	 * @return The maximum value of the column.
+	 */
+	public <T> T max(SqlFunction<E, T> column) {
+		return max(column, FunctionUtils.alwaysTrue());
+	}
+
+	/**
+	 * Gets the maximum value of a column in a set of values filtered by a condition.
+	 *
+	 * @param column    The column to get the maximum value of.
+	 * @param predicate The predicate to filter by.
+	 * @param <T>       The generic type of the column. It is also the return type.
+	 * @return The maximum value of the column.
+	 */
+	public <T> T max(SqlFunction<E, T> column, SqlPredicate<E> predicate) {
+		try (var connection = new DBConnection()) {
+			try (var result = connection.execute(String.format("select max(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+				if (result.next()) {
+					return (T) result.getObject(1);
+				}
+
+				return null;
+			}
+		} catch (SQLException e) {
+			throw new IllegalArgumentException(String.format("Could not get maximum value of column %s in table %s.", Lambda2Sql.toSql(column), this.tableName), e);
+		}
+	}
+
+	//endregion
+
+	//region Min
+
+	/**
+	 * Gets the minimum value of a column in a table.
+	 * Please note that this does not include {@code null} values.
+	 *
+	 * @param column The column to get the minimum value of.
+	 * @param <T>    The generic type of the column. It is also the return type.
+	 * @return The minimum value of the column.
+	 */
+	public <T> T min(SqlFunction<E, T> column) {
+		return min(column, FunctionUtils.alwaysTrue());
+	}
+
+	/**
+	 * Gets the minimum value of a column in a set of values filtered by a condition.
+	 * Please note that this does not include {@code null} values.
+	 *
+	 * @param column    The column to get the minimum value of.
+	 * @param predicate The predicate to filter by.
+	 * @param <T>       The generic type of the column. It is also the return type.
+	 * @return The minimum value of the column.
+	 */
+	public <T> T min(SqlFunction<E, T> column, SqlPredicate<E> predicate) {
+		try (var connection = new DBConnection()) {
+			try (var result = connection.execute(String.format("select min(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+				if (result.next()) {
+					return (T) result.getObject(1);
+				}
+
+				return null;
+			}
+		} catch (SQLException e) {
+			throw new IllegalArgumentException(String.format("Could not get minimum value of column %s in table %s.", Lambda2Sql.toSql(column), this.tableName), e);
 		}
 	}
 
@@ -254,15 +330,14 @@ public class BaseService<T extends BaseEntity> {
 	 * @param column The column to check for duplicate values for.
 	 * @return {@code True} if there is at least one duplicate value in the specified column, {@code false} otherwise.
 	 */
-	public boolean hasDuplicates(SqlFunction<T, ?> column) {
+	public boolean hasDuplicates(SqlFunction<E, ?> column) {
 		var sqlColumn = Lambda2Sql.toSql(column, this.tableName);
 		try (var connection = new DBConnection()) {
 			try (var result = connection.execute(String.format("select %s from `%s` group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn))) {
 				return result.next();
 			}
 		} catch (SQLException e) {
-			e.printStackTrace();
-			throw new IllegalArgumentException(String.format("Could not check if duplicate values exist in column %s on table %s.", sqlColumn, this.tableName));
+			throw new IllegalArgumentException(String.format("Could not check if duplicate values exist in column %s on table %s.", sqlColumn, this.tableName), e);
 		}
 	}
 
@@ -275,7 +350,7 @@ public class BaseService<T extends BaseEntity> {
 	 * If you do not require a plain {@link EntityQuery}, please consider using the
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
-	protected EntityQuery<T> createQuery() {
+	protected EntityQuery<E> createQuery() {
 		return new EntityQuery<>(this.type);
 	}
 
@@ -284,7 +359,7 @@ public class BaseService<T extends BaseEntity> {
 	 * If you do not require a plain {@link SingleEntityQuery}, please consider using the
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
-	protected SingleEntityQuery<T> createSingleQuery() {
+	protected SingleEntityQuery<E> createSingleQuery() {
 		return new SingleEntityQuery<>(this.type);
 	}
 
@@ -294,7 +369,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL query.
 	 * @return An entity matching the result of the query.
 	 */
-	public Optional<T> getFirst(SqlPredicate<T> predicate) {
+	public Optional<E> getFirst(SqlPredicate<E> predicate) {
 		return createSingleQuery().where(predicate).first();
 	}
 
@@ -304,7 +379,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL query.
 	 * @return An entity matching the result of the query.
 	 */
-	public SingleEntityQuery<T> getSingle(SqlPredicate<T> predicate) {
+	public SingleEntityQuery<E> getSingle(SqlPredicate<E> predicate) {
 		return createSingleQuery().where(predicate);
 	}
 
@@ -314,7 +389,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The {@link SqlPredicate} to add constraints to a DQL statement.
 	 * @return A list of entities matching the result of the query.
 	 */
-	public EntityQuery<T> getMultiple(SqlPredicate<T> predicate) {
+	public EntityQuery<E> getMultiple(SqlPredicate<E> predicate) {
 		return createQuery().where(predicate);
 	}
 
@@ -322,14 +397,14 @@ public class BaseService<T extends BaseEntity> {
 	 * @param id The id of the desired entity.
 	 * @return Gets an entity by its id.
 	 */
-	public Optional<T> getById(long id) {
+	public Optional<E> getById(long id) {
 		return getFirst(x -> x.getId() == id);
 	}
 
 	/**
 	 * @return All entities in this table.
 	 */
-	public List<T> getAll() {
+	public List<E> getAll() {
 		return createQuery().toList();
 	}
 
@@ -339,7 +414,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param orderBy The property to order by.
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
-	public List<T> getAll(SqlFunction<T, ?> orderBy) {
+	public List<E> getAll(SqlFunction<E, ?> orderBy) {
 		return createQuery().orderBy(orderBy).toList();
 	}
 
@@ -349,7 +424,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param orderBy The properties to order by.
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
-	public List<T> getAll(SqlFunction<T, ?>[] orderBy) {
+	public List<E> getAll(SqlFunction<E, ?>[] orderBy) {
 		return createQuery().orderBy(orderBy).toList();
 	}
 
@@ -360,7 +435,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param sortingType The order direction. Can be either ascending or descending.
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
-	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?> orderBy) {
+	public List<E> getAll(OrderTypes sortingType, SqlFunction<E, ?> orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).toList();
 	}
 
@@ -372,7 +447,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
 
-	public List<T> getAll(OrderTypes sortingType, SqlFunction<T, ?>[] orderBy) {
+	public List<E> getAll(OrderTypes sortingType, SqlFunction<E, ?>[] orderBy) {
 		return createQuery().orderBy(sortingType, orderBy).toList();
 	}
 
@@ -388,7 +463,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entriesPerPage The number of entries to be displayed on each page.
 	 * @return A pagination which splits up an entire table into multiple pages.
 	 */
-	public PaginationResult<T> createPagination(int entriesPerPage) {
+	public PaginationResult<E> createPagination(int entriesPerPage) {
 		return new PaginationResult<>(createPaginationQueries(entriesPerPage));
 	}
 
@@ -402,7 +477,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entriesPerPage The number of entries to be displayed on each page.
 	 * @return A pagination which splits the result of a condition into multiple pages.
 	 */
-	public PaginationResult<T> createPagination(SqlPredicate<T> predicate, int entriesPerPage) {
+	public PaginationResult<E> createPagination(SqlPredicate<E> predicate, int entriesPerPage) {
 		return new PaginationResult<>(createPaginationQueries(predicate, entriesPerPage));
 	}
 
@@ -419,7 +494,7 @@ public class BaseService<T extends BaseEntity> {
 	 *                        it will be retrieved from the database again and re-stored in the cache.
 	 * @return A pagination which displays a entire table
 	 */
-	public CacheablePaginationResult<T> createPagination(int entriesPerPage, Duration cacheExpiration) {
+	public CacheablePaginationResult<E> createPagination(int entriesPerPage, Duration cacheExpiration) {
 		return new CacheablePaginationResult<>(createPaginationQueries(entriesPerPage), cacheExpiration);
 	}
 
@@ -437,7 +512,7 @@ public class BaseService<T extends BaseEntity> {
 	 *                        it will be retrieved from the database again and re-stored in the cache.
 	 * @return A pagination which allows the developer to retrieve specific pages from the result.
 	 */
-	public CacheablePaginationResult<T> createPagination(SqlPredicate<T> predicate, int entriesPerPage, Duration cacheExpiration) {
+	public CacheablePaginationResult<E> createPagination(SqlPredicate<E> predicate, int entriesPerPage, Duration cacheExpiration) {
 		return new CacheablePaginationResult<>(createPaginationQueries(predicate, entriesPerPage), cacheExpiration);
 	}
 
@@ -454,7 +529,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
-	public void update(T instance) throws SQLException {
+	public void update(E instance) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery(instance));
 			logger.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
@@ -470,7 +545,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @see #update(List)
 	 */
 	@SuppressWarnings("unchecked")
-	public void update(T... instances) throws SQLException {
+	public void update(E... instances) throws SQLException {
 		update(Arrays.asList(instances));
 	}
 
@@ -482,9 +557,9 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
-	public void update(List<T> instances) throws SQLException {
+	public void update(List<E> instances) throws SQLException {
 		try (var connection = new DBConnection()) {
-			for (T instance : instances) {
+			for (E instance : instances) {
 				connection.update(updateQuery(instance));
 			}
 
@@ -492,7 +567,7 @@ public class BaseService<T extends BaseEntity> {
 		}
 	}
 
-	private String updateQuery(T instance) {
+	private String updateQuery(E instance) {
 		var updateQuery = new StringBuilder("update `").append(this.tableName).append("` set ");
 		var fieldJoiner = new StringJoiner(", ");
 		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
@@ -502,6 +577,26 @@ public class BaseService<T extends BaseEntity> {
 		});
 
 		return updateQuery.append(fieldJoiner.toString()).append(String.format(" where %s = ", this.idAccess)).append(instance.getId()).toString();
+	}
+
+	/**
+	 * Updates a specific column based on the current column value in the database.
+	 *
+	 * @param entityId         The id of the row to update.
+	 * @param column           The column to update.
+	 * @param newValueFunction The function to calculate the new value.
+	 * @param <R>              The type of the column to update.
+	 * @throws SQLException if the query cannot be executed due to database constraints
+	 *                      i.e. non-existing default value for field or an incorrect data type.
+	 */
+	public <R> void update(long entityId, SqlFunction<E, R> column, SqlFunction<E, R> newValueFunction) throws SQLException {
+		SqlPredicate<E> predicate = x -> x.getId() == entityId;
+		var query = String.format("update `%s` set %s = %s where %s", this.tableName, Lambda2Sql.toSql(column, this.tableName), Lambda2Sql.toSql(newValueFunction, this.tableName), Lambda2Sql.toSql(predicate, this.tableName));
+
+		try (var connection = new DBConnection()) {
+			connection.update(query);
+			logger.logf("Database-based update on table '%s' was succesful.", this.tableName);
+		}
 	}
 
 	/**
@@ -515,7 +610,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
-	public <R> void update(long entityId, SqlFunction<T, R> column, R newValue) throws SQLException {
+	public <R> void update(long entityId, SqlFunction<E, R> column, R newValue) throws SQLException {
 		update(x -> x.getId() == entityId, column, newValue);
 	}
 
@@ -530,7 +625,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
-	public <R> void update(SqlPredicate<T> condition, SqlFunction<T, R> column, R newValue) throws SQLException {
+	public <R> void update(SqlPredicate<E> condition, SqlFunction<E, R> column, R newValue) throws SQLException {
 		var query = String.format("update `%s` set %s = %s where %s;", this.tableName, Lambda2Sql.toSql(column, this.tableName), convertToSql(newValue), Lambda2Sql.toSql(condition, this.tableName));
 
 		try (var connection = new DBConnection()) {
@@ -549,7 +644,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param instance The instance to delete on the database.
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
-	public void delete(T instance) throws SQLException {
+	public void delete(E instance) throws SQLException {
 		var id = instance.getId();
 		delete(x -> x.getId() == id);
 	}
@@ -570,9 +665,9 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entities The list of entities to delete.
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
-	public void delete(List<T> entities) throws SQLException {
+	public void delete(List<E> entities) throws SQLException {
 		var joiner = new StringJoiner(", ", "(", ")");
-		for (T entity : entities) {
+		for (E entity : entities) {
 			joiner.add(Long.toString(entity.getId()));
 		}
 
@@ -591,7 +686,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @see #delete(List)
 	 */
 	@SuppressWarnings("unchecked")
-	public void delete(T... entities) throws SQLException {
+	public void delete(E... entities) throws SQLException {
 		delete(Arrays.asList(entities));
 	}
 
@@ -616,7 +711,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param predicate The condition to delete by.
 	 * @throws SQLException in case the condition cannot be applied or if a foreign key constraint fails.
 	 */
-	public void delete(SqlPredicate<T> predicate) throws SQLException {
+	public void delete(SqlPredicate<E> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 			logger.logf("%s successfully deleted!", this.type.getSimpleName());
@@ -645,8 +740,8 @@ public class BaseService<T extends BaseEntity> {
 	 * @return The entity class used as a generic type for this BaseService.
 	 */
 	@SuppressWarnings("unchecked")
-	private Class<T> getGenericType() {
-		return ((Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);
+	private Class<E> getGenericType() {
+		return ((Class<E>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);
 	}
 
 	/**
@@ -667,7 +762,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entityInstance The entity to get the value from.
 	 * @return The value of the field in the entity.
 	 */
-	private Object getFieldValue(Field entityField, T entityInstance) {
+	private Object getFieldValue(Field entityField, E entityInstance) {
 		try {
 			return entityField.get(entityInstance);
 		} catch (IllegalAccessException e) {
@@ -682,7 +777,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entityInstance The entity containing the value
 	 * @return A {@code String} representing the SQL value of the entity field.
 	 */
-	private String getSqlValue(Field entityField, T entityInstance) {
+	private String getSqlValue(Field entityField, E entityInstance) {
 		return convertToSql(getFieldValue(entityField, entityInstance));
 	}
 
@@ -731,7 +826,7 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entriesPerPage The number of entries to be displayed on each page.
 	 * @return A list of queries containing the definitions for getting specific pages.
 	 */
-	private List<EntityQuery<T>> createPaginationQueries(int entriesPerPage) {
+	private List<EntityQuery<E>> createPaginationQueries(int entriesPerPage) {
 		return createPaginationQueries(x -> true, entriesPerPage);
 	}
 
@@ -742,10 +837,10 @@ public class BaseService<T extends BaseEntity> {
 	 * @param entriesPerPage The number of entries to be displayed on each page.
 	 * @return A list of queries containing the definitions for getting specific pages.
 	 */
-	private List<EntityQuery<T>> createPaginationQueries(SqlPredicate<T> predicate, int entriesPerPage) {
+	private List<EntityQuery<E>> createPaginationQueries(SqlPredicate<E> predicate, int entriesPerPage) {
 		var count = this.count(predicate);
 		var numberOfPages = Math.ceil(count / (double) entriesPerPage);
-		var queries = new ArrayList<EntityQuery<T>>((int) numberOfPages);
+		var queries = new ArrayList<EntityQuery<E>>((int) numberOfPages);
 		for (int i = 0; i < numberOfPages; i++) {
 			var offset = i * entriesPerPage;
 			//TODO Refactor the limit-offset-combo for performance in bigger data sets.

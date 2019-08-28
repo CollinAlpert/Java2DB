@@ -50,7 +50,7 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	/**
 	 * Sets an ORDER BY clauses for the DQL statement.
 	 *
-	 * @param function The column to order by..
+	 * @param function The column to order by.
 	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
 	@Override

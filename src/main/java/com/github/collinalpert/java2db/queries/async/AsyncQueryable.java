@@ -3,8 +3,10 @@ package com.github.collinalpert.java2db.queries.async;
 import com.github.collinalpert.java2db.queries.Queryable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -76,5 +78,60 @@ public interface AsyncQueryable<T> extends Queryable<T>, AsyncSingleQueryable<T>
 	 */
 	default CompletableFuture<Void> toArrayAsync(Consumer<? super T[]> callback) {
 		return toArrayAsync().thenAcceptAsync(callback);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #toMap(Function)} method.
+	 *
+	 * @param keyMapping The field representing the keys of the map.
+	 * @param <K>        The type of the keys in the map.
+	 * @return The asynchronous operation which will retrieve the data from the database.
+	 * Custom handling for the {@code CompletableFuture} can be done here.
+	 * @see #toMap(Function)
+	 */
+	default <K> CompletableFuture<Map<K, T>> toMapAsync(Function<T, K> keyMapping) {
+		return CompletableFuture.supplyAsync(() -> this.toMap(keyMapping));
+	}
+
+	/**
+	 * The asynchronous version of the {@link #toMap(Function)} method.
+	 *
+	 * @param keyMapping The field representing the keys of the map.
+	 * @param callback   The action to be applied to the result once it is fetched from the database.
+	 * @param <K>        The type of the keys in the map.
+	 * @return The asynchronous operation which will retrieve the data from the database and apply the given action to the result.
+	 * @see #toMap(Function)
+	 */
+	default <K> CompletableFuture<Void> toMapAsync(Function<T, K> keyMapping, Consumer<? super Map<K, T>> callback) {
+		return toMapAsync(keyMapping).thenAcceptAsync(callback);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #toMap(Function, Function)} method.
+	 *
+	 * @param keyMapping   The field representing the keys of the map.
+	 * @param valueMapping The field representing the values of the map.
+	 * @param <K>          The type of the keys in the map.
+	 * @param <V>          The type of the values in the map.
+	 * @return The asynchronous operation which will retrieve the data from the database.
+	 * Custom handling for the {@code CompletableFuture} can be done here.
+	 * @see #toMap(Function, Function)
+	 */
+	default <K, V> CompletableFuture<Map<K, V>> toMapAsync(Function<T, K> keyMapping, Function<T, V> valueMapping) {
+		return CompletableFuture.supplyAsync(() -> this.toMap(keyMapping, valueMapping));
+	}
+
+	/**
+	 * The asynchronous version of the {@link #toMap(Function, Function)} method.
+	 *
+	 * @param keyMapping   The field representing the keys of the map.
+	 * @param valueMapping The field representing the values of the map.
+	 * @param callback     The action to be applied to the result once it is fetched from the database.
+	 * @param <K>          The type of the keys in the map.
+	 * @param <V>          The type of the values in the map.
+	 * @return The asynchronous operation which will retrieve the data from the database and apply the given action to the result.
+	 */
+	default <K, V> CompletableFuture<Void> toMapAsync(Function<T, K> keyMapping, Function<T, V> valueMapping, Consumer<? super Map<K, V>> callback) {
+		return toMapAsync(keyMapping, valueMapping).thenAcceptAsync(callback);
 	}
 }

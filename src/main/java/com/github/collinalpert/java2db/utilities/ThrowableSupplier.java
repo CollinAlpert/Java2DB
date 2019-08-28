@@ -17,15 +17,13 @@ public interface ThrowableSupplier<T, E extends Throwable> extends Supplier<T> {
 
 	T fetch() throws E;
 
-	/**
-	 * This method only exists so this interface can be used as a functional interface.
-	 *
-	 * @return This method will always return {@code null}.
-	 * @deprecated Do not use this method in a specific implementation. Please use the {@link #fetch()} method instead.
-	 */
-	@Deprecated(since = "4.0")
 	@Override
 	default T get() {
-		return null;
+		try {
+			return fetch();
+		} catch (Throwable exception) {
+			exception.printStackTrace();
+			return null;
+		}
 	}
 }

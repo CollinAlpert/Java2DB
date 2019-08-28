@@ -15,13 +15,12 @@ public interface ThrowableRunnable<E extends Throwable> extends Runnable {
 
 	void doAction() throws E;
 
-	/**
-	 * This method only exists so this interface can be used as a functional interface.
-	 *
-	 * @deprecated Do not use this method in a specific implementation. Please use the {@link #doAction()} method instead.
-	 */
-	@Deprecated(since = "4.0")
 	@Override
 	default void run() {
+		try {
+			doAction();
+		} catch (Throwable exception) {
+			exception.printStackTrace();
+		}
 	}
 }

@@ -19,11 +19,13 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.github.collinalpert.java2db.utilities.Utilities.tryAction;
@@ -107,6 +109,25 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 		var module = new ArrayModule<>(this.clazz, 20);
 		mapInternal(set, module::addElement, aliases);
 		return module.getArray();
+	}
+
+	/**
+	 * Maps a {@code ResultSet} to a {@link Map}.
+	 *
+	 * @param set          The {@code ResultSet} to get the data from.
+	 * @param keyMapping   The key function of the map.
+	 * @param valueMapping The value function of the map.
+	 * @param aliases      A map of column aliases needed to retrieve column data from the {@code ResultSet}.
+	 * @param <K>          The type of the keys in the map.
+	 * @param <V>          The type of the values in the map.
+	 * @return A {@code Map} containing the {@code ResultSet}s data.
+	 * @throws SQLException In case the {@code ResultSet} can't be read.
+	 */
+	@Override
+	public <K, V> Map<K, V> mapToMap(ResultSet set, Function<E, K> keyMapping, Function<E, V> valueMapping, Map<String, String> aliases) throws SQLException {
+		var map = new HashMap<K, V>();
+		mapInternal(set, x -> map.put(keyMapping.apply(x), valueMapping.apply(x)), aliases);
+		return map;
 	}
 
 	/**
