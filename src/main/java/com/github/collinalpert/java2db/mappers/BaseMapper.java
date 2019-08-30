@@ -178,9 +178,14 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 					}
 
 					var foreignKeyName = getForeignKeyName(field);
+					var value = tryGetValue(() -> getAccessibleField(field.getDeclaringClass(), foreignKeyName).get(entity));
+					if (value == null) {
+						continue;
+					}
+
 					var foundEnum = Arrays.stream(field.getType().getEnumConstants())
 							.map(x -> (IdentifiableEnum) x)
-							.filter(x -> Long.valueOf(tryGetValue(() -> getAccessibleField(field.getDeclaringClass(), foreignKeyName).get(entity)).toString()) == x.getId())
+							.filter(x -> Long.parseLong(value.toString()) == x.getId())
 							.findFirst();
 
 					foundEnum.ifPresent(identifiableEnum -> tryAction(() -> field.set(entity, field.getType().cast(identifiableEnum))));
