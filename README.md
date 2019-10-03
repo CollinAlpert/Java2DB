@@ -59,7 +59,7 @@ public class Gender extends BaseEntity {
 ```java
 @TableName("person")
 public class Person extends BaseEntity {
-	//BaseEntity gives us the id field.
+	// BaseEntity gives us the id field.
 	// We need to add the rest.
 	
 	private String name;
@@ -80,6 +80,7 @@ public class Person extends BaseEntity {
 ```
 
 Every POJO *must* extend `BaseEntity` and have an empty or default constructor.\
+The class `BaseEntity` overrides the `equals` and `hashCode` methods using the `id`. Override them in your entity classes if you need different behavior.\
 If you want to have a field in your POJO that should be ignored by Java2DB, you can apply the `Ignore` attribute to the specific field.
 
 Then we can go ahead and create the service classes:

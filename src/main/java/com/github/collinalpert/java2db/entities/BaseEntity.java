@@ -20,12 +20,33 @@ public class BaseEntity {
 	 *
 	 * @param id The id of the entity.
 	 */
+	@Deprecated
 	public void setId(long id) {
 		this.id = id;
 	}
 
 	@Override
 	public String toString() {
-		return "Id: " + id;
+		return "Id: " + this.id;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+
+		if (!(o instanceof BaseEntity)) {
+			return false;
+		}
+
+		BaseEntity that = (BaseEntity) o;
+
+		return this.id == that.id;
+	}
+
+	@Override
+	public int hashCode() {
+		return (int) (this.id ^ (this.id >>> 32));
 	}
 }
