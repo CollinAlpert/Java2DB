@@ -1,10 +1,10 @@
 package com.github.collinalpert.java2db.queries;
 
+import com.github.collinalpert.expressions.expression.LambdaExpression;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
-import com.trigersoft.jaque.expression.LambdaExpression;
 
 import java.sql.SQLException;
 import java.util.Optional;
