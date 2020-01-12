@@ -19,7 +19,7 @@ jobs:
           java-version: '13'
 
       - name: Release to Central Repository
-        uses: samuelmeuli/action-maven-publish@v0.1.0
+        uses: samuelmeuli/action-maven-publish@v1
         with:
           gpg_private_key: ${{ secrets.gpg_private_key }}
           gpg_passphrase: ${{ secrets.gpg_passphrase }}
@@ -44,10 +44,10 @@ jobs:
           gpg_private_key: ${{ secrets.gpg_private_key }}
           gpg_passphrase: ${{ secrets.gpg_passphrase }}
         run: |
-          mkdir ~/.m2
+          mkdir -p ~/.m2
           echo "${gpg_private_key}" | gpg --batch --import
           echo "<settings><servers><server><id>github</id><username>CollinAlpert</username><password>${github_token}</password></server></servers></settings>" > ~/.m2/settings.xml
-          mvn clean deploy -B -e -Dmaven.wagon.http.pool=false -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/CollinAlpert/TestMaven -Dgpg.passphrase=${gpg_passphrase}
+          mvn clean deploy -B -e -Dmaven.wagon.http.pool=false -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/CollinAlpert/Java2DB -Dgpg.passphrase=${gpg_passphrase}
 
   github_release:
     name: Create GitHub release
