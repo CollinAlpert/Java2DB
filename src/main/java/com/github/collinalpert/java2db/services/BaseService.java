@@ -6,7 +6,6 @@ import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.modules.AnnotationModule;
 import com.github.collinalpert.java2db.modules.FieldModule;
-import com.github.collinalpert.java2db.modules.LoggingModule;
 import com.github.collinalpert.java2db.modules.TableModule;
 import com.github.collinalpert.java2db.pagination.CacheablePaginationResult;
 import com.github.collinalpert.java2db.pagination.PaginationResult;
@@ -46,16 +45,11 @@ public class BaseService<E extends BaseEntity> {
 	private static final AnnotationModule annotationModule;
 	private static final FieldModule fieldModule;
 	private static final TableModule tableModule;
-	/**
-	 * The logger used to log queries and messages to the console.
-	 */
-	private static final LoggingModule logger;
 
 	static {
 		annotationModule = AnnotationModule.getInstance();
 		fieldModule = FieldModule.getInstance();
 		tableModule = TableModule.getInstance();
-		logger = LoggingModule.getInstance();
 	}
 
 	/**
@@ -114,7 +108,6 @@ public class BaseService<E extends BaseEntity> {
 		try (var connection = new DBConnection()) {
 			var id = connection.update(insertQuery.toString());
 			instance.setId(id);
-			logger.logf("%s successfully created!", this.type.getSimpleName());
 			return id;
 		}
 	}
@@ -171,7 +164,6 @@ public class BaseService<E extends BaseEntity> {
 		insertQuery.append(String.join(", ", rows));
 		try (var connection = new DBConnection()) {
 			connection.update(insertQuery.toString());
-			logger.logf("%s entities were successfully created.", this.type.getSimpleName());
 		}
 	}
 
@@ -532,7 +524,6 @@ public class BaseService<E extends BaseEntity> {
 	public void update(E instance) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(updateQuery(instance));
-			logger.logf("%s with id %d was successfully updated.", this.type.getSimpleName(), instance.getId());
 		}
 	}
 
@@ -562,8 +553,6 @@ public class BaseService<E extends BaseEntity> {
 			for (E instance : instances) {
 				connection.update(updateQuery(instance));
 			}
-
-			logger.logf("%s were successfully updated.", this.type.getSimpleName());
 		}
 	}
 
@@ -595,7 +584,6 @@ public class BaseService<E extends BaseEntity> {
 
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			logger.logf("Database-based update on table '%s' was succesful.", this.tableName);
 		}
 	}
 
@@ -630,7 +618,6 @@ public class BaseService<E extends BaseEntity> {
 
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			logger.logf("Column-specific update for table '%s' was successful.", tableModule.getTableName(this.type));
 		}
 	}
 
@@ -667,14 +654,13 @@ public class BaseService<E extends BaseEntity> {
 	 */
 	public void delete(List<E> entities) throws SQLException {
 		var joiner = new StringJoiner(", ", "(", ")");
-		for (E entity : entities) {
+		for (var entity : entities) {
 			joiner.add(Long.toString(entity.getId()));
 		}
 
 		var joinedIds = joiner.toString();
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s in %s", this.tableName, this.idAccess, joinedIds));
-			logger.logf("%s with ids %s successfully deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
@@ -714,7 +700,6 @@ public class BaseService<E extends BaseEntity> {
 	public void delete(SqlPredicate<E> predicate) throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
-			logger.logf("%s successfully deleted!", this.type.getSimpleName());
 		}
 	}
 
@@ -728,7 +713,6 @@ public class BaseService<E extends BaseEntity> {
 	public void truncateTable() throws SQLException {
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("truncate table `%s`;", this.tableName));
-			logger.logf("Table %s was successfully truncated.", this.tableName);
 		}
 	}
 

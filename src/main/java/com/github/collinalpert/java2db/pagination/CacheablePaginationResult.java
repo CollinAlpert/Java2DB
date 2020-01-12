@@ -108,5 +108,6 @@ public class CacheablePaginationResult<T extends BaseEntity> extends PaginationR
 	public void invalidateCache(String name) {
 		listCache.getValue().invalidate(name);
 		streamCache.getValue().invalidate(name);
+		arrayCache.getValue().invalidate(name);
 	}
 }

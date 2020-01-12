@@ -1,0 +1,108 @@
+name: Post-push actions
+
+# Run workflow only on commits to `master`
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  maven_deploy:
+    name: Deploy to Maven
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '13'
+
+      - name: Release to Central Repository
+        uses: samuelmeuli/action-maven-publish@v0.1.0
+        with:
+          gpg_private_key: ${{ secrets.gpg_private_key }}
+          gpg_passphrase: ${{ secrets.gpg_passphrase }}
+          nexus_username: ${{ secrets.nexus_username }}
+          nexus_password: ${{ secrets.nexus_password }}
+
+  github_deploy:
+    name: Deploy to GitHub Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Setup JDK 13
+        uses: actions/setup-java@v1
+        with:
+          java-version: '13'
+
+      - name: Release to GitHub Package Registry
+        env:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          gpg_private_key: ${{ secrets.gpg_private_key }}
+          gpg_passphrase: ${{ secrets.gpg_passphrase }}
+        run: |
+          mkdir ~/.m2
+          echo "${gpg_private_key}" | gpg --batch --import
+          echo "<settings><servers><server><id>github</id><username>CollinAlpert</username><password>${github_token}</password></server></servers></settings>" > ~/.m2/settings.xml
+          mvn clean deploy -B -e -Dmaven.wagon.http.pool=false -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/CollinAlpert/TestMaven -Dgpg.passphrase=${gpg_passphrase}
+
+  github_release:
+    name: Create GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Setup JDK 13
+        uses: actions/setup-java@v1
+        with:
+          java-version: '13'
+
+      - name: Build project
+        run: mvn -B clean package
+
+      - name: Get project infos
+        id: get-project-infos
+        run: echo "::set-output name=maven_version::$(mvn -Dexec.executable='echo' -Dexec.args='${project.version}' --non-recursive exec:exec -q)" && echo "::set-output name=maven_artifactId::$(mvn -Dexec.executable='echo' -Dexec.args='${project.artifactId}' --non-recursive exec:exec -q)"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get-project-infos.outputs.maven_version }}
+          release_name: ${{ steps.get-project-infos.outputs.maven_version }}
+
+      - name: Upload JAR asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/${{ steps.get-project-infos.outputs.maven_artifactId }}-${{ steps.get-project-infos.outputs.maven_version }}.jar
+          asset_name: ${{ steps.get-project-infos.outputs.maven_artifactId }}-${{ steps.get-project-infos.outputs.maven_version }}.jar
+          asset_content_type: application/java-archive
+
+      - name: Upload JavaDoc asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/${{ steps.get-project-infos.outputs.maven_artifactId }}-${{ steps.get-project-infos.outputs.maven_version }}-javadoc.jar
+          asset_name: ${{ steps.get-project-infos.outputs.maven_artifactId }}-${{ steps.get-project-infos.outputs.maven_version }}-javadoc.jar
+          asset_content_type: application/java-archive
+
+      - name: Upload Sources asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/${{ steps.get-project-infos.outputs.maven_artifactId }}-${{ steps.get-project-infos.outputs.maven_version }}-sources.jar
+          asset_name: ${{ steps.get-project-infos.outputs.maven_artifactId }}-${{ steps.get-project-infos.outputs.maven_version }}-sources.jar
+          asset_content_type: application/java-archive

@@ -142,6 +142,7 @@ public class PaginationResult<T extends BaseEntity> {
 	public final PaginationResult<T> orderBy(OrderTypes orderType, SqlFunction<T, ?>... orderFunctions) {
 		this.orderFunctions = orderFunctions;
 		this.orderType = orderType;
+
 		return this;
 	}
 }

@@ -2,7 +2,6 @@ package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseDeletableEntity;
-import com.github.collinalpert.java2db.modules.LoggingModule;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
@@ -21,12 +20,6 @@ import java.util.StringJoiner;
  * @author Collin Alpert
  */
 public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseService<T> {
-
-	private static final LoggingModule logger;
-
-	static {
-		logger = LoggingModule.getInstance();
-	}
 
 	private final SqlFunction<T, Boolean> isDeletedFunc = BaseDeletableEntity::isDeleted;
 
@@ -68,7 +61,6 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		var joinedIds = joiner.toString();
 		try (var connection = new DBConnection()) {
 			connection.update(String.format("update `%s` set %s = 1 where `%s`.`id` in %s", this.tableName, Lambda2Sql.toSql(this.isDeletedFunc, this.tableName), this.tableName, joinedIds));
-			logger.logf("%s with ids %s successfully soft deleted!", this.type.getSimpleName(), joinedIds);
 		}
 	}
 
@@ -111,7 +103,6 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		var query = String.format("update %s set %s = 1 where %s", super.tableName, Lambda2Sql.toSql(this.isDeletedFunc, super.tableName), Lambda2Sql.toSql(predicate));
 		try (var connection = new DBConnection()) {
 			connection.update(query);
-			logger.logf("%s successfully soft deleted!", this.type.getSimpleName());
 		}
 	}
 }
