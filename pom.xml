@@ -6,7 +6,7 @@
 
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>5.2.1</version>
+    <version>5.3.0</version>
     <packaging>jar</packaging>
 
     <name>Java2DB</name>
@@ -68,13 +68,13 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.18</version>
+            <version>8.0.19</version>
         </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.5.2</version>
+            <version>5.6.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -96,7 +96,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>

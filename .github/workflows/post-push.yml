@@ -45,7 +45,6 @@ jobs:
           gpg_passphrase: ${{ secrets.gpg_passphrase }}
         run: |
           mkdir -p ~/.m2
-          export GPG_TTY=$(tty)
           echo "${gpg_private_key}" | gpg --batch --import
           echo "<settings><servers><server><id>github</id><username>CollinAlpert</username><password>${github_token}</password></server></servers></settings>" > ~/.m2/settings.xml
           mvn clean deploy -B -e -Dmaven.wagon.http.pool=false -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/CollinAlpert/Java2DB -Dgpg.passphrase=${gpg_passphrase}
@@ -71,7 +70,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1.0.0
+        uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

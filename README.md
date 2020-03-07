@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>5.2.1</version>
+    <version>5.3.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -213,7 +213,8 @@ public class Person extends BaseEntity {
 ### Default database values
 If you would like to use the database-set default value for POJO fields which are null when creating or modifying data on the database, you need to annotate the specific field with the ```DefaultIfNull``` annotation. 
 You then have the additional option to specify if this behavior should occur on create or update statements, or both. 
-When the annotation is specified, per default the default database value is used on create statements, but not on update ones. 
+When the annotation is specified, per default the default database value is used on create statements, but not on update ones.\
+If you __always__ want Java2DB to use your database-default value, regardless if `null` or not, simply use the `Default` annotation. 
 
 ### Column name deviations
 To be able to target any column naming conventions, it is possible to explicitly tell Java2DB which table column a POJO field targets with the `@ColumnName` attribute. Simply apply the attribute to a field.

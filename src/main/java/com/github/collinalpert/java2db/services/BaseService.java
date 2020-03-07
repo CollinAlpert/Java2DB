@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.services;
 
+import com.github.collinalpert.java2db.annotations.Default;
 import com.github.collinalpert.java2db.annotations.DefaultIfNull;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
@@ -94,7 +95,7 @@ public class BaseService<E extends BaseEntity> {
 		var joiner = new StringJoiner(", ", "(", ");");
 		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			if (getFieldValue(field, instance) == null && annotationModule.hasAnnotation(field, DefaultIfNull.class, DefaultIfNull::onCreate)) {
+			if (annotationModule.hasAnnotation(field, Default.class) || (getFieldValue(field, instance) == null && annotationModule.hasAnnotation(field, DefaultIfNull.class, DefaultIfNull::onCreate))) {
 				joiner.add("default");
 				return;
 			}
@@ -148,7 +149,7 @@ public class BaseService<E extends BaseEntity> {
 			for (var entityField : entityFields) {
 				entityField.setAccessible(true);
 				var instance = instances.get(i);
-				if (getFieldValue(entityField, instance) == null && annotationModule.hasAnnotation(entityField, DefaultIfNull.class, DefaultIfNull::onCreate)) {
+				if (annotationModule.hasAnnotation(entityField, Default.class) || (getFieldValue(entityField, instance) == null && annotationModule.hasAnnotation(entityField, DefaultIfNull.class, DefaultIfNull::onCreate))) {
 					joiner.add("default");
 					return;
 				}
@@ -561,7 +562,7 @@ public class BaseService<E extends BaseEntity> {
 		var fieldJoiner = new StringJoiner(", ");
 		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
 			field.setAccessible(true);
-			var sqlValue = getFieldValue(field, instance) == null && annotationModule.hasAnnotation(field, DefaultIfNull.class, DefaultIfNull::onUpdate) ? "default" : getSqlValue(field, instance);
+			var sqlValue = annotationModule.hasAnnotation(field, Default.class) || (getFieldValue(field, instance) == null && annotationModule.hasAnnotation(field, DefaultIfNull.class, DefaultIfNull::onUpdate)) ? "default" : getSqlValue(field, instance);
 			fieldJoiner.add(String.format("`%s` = %s", tableModule.getColumnName(field), sqlValue));
 		});
 
@@ -589,7 +590,7 @@ public class BaseService<E extends BaseEntity> {
 
 	/**
 	 * Updates a specific column for a single record in a table.
-	 * This method is not affected by the {@link DefaultIfNull} annotation.
+	 * This method is not affected by the {@link DefaultIfNull} or the {@link Default} annotation.
 	 *
 	 * @param entityId The id of the record.
 	 * @param column   The column to update.
@@ -604,7 +605,7 @@ public class BaseService<E extends BaseEntity> {
 
 	/**
 	 * Updates a specific column for records matching a condition in a table.
-	 * This method is not affected by the {@link DefaultIfNull} annotation.
+	 * This method is not affected by the {@link DefaultIfNull} or the {@link Default} annotation.
 	 *
 	 * @param condition The condition to update the column by.
 	 * @param column    The column to update.
