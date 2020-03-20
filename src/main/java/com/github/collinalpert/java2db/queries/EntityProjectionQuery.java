@@ -57,17 +57,6 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 	}
 
 	/**
-	 * Executes a new query and returns the result as a {@link Map}. This method is equivalent to the call {@code Queryable#toMap(keyMapping, x -> x)}.
-	 *
-	 * @param keyMapping The field representing the keys of the map.
-	 * @return A map containing the result of the query.
-	 */
-	@Override
-	public <K> Map<K, R> toMap(Function<R, K> keyMapping) {
-		return this.toMap(keyMapping, x -> x);
-	}
-
-	/**
 	 * Executes a new query and returns the result as a {@link Map}.
 	 *
 	 * @param keyMapping   The field representing the keys of the map.

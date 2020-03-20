@@ -38,7 +38,9 @@ public interface Queryable<T> extends SingleQueryable<T> {
 	 * @param <K>        The type of the field representing the keys.
 	 * @return A map containing the result of the query.
 	 */
-	<K> Map<K, T> toMap(Function<T, K> keyMapping);
+	default <K> Map<K, T> toMap(Function<T, K> keyMapping) {
+		return this.toMap(keyMapping, Function.identity());
+	}
 
 	/**
 	 * Executes a new query and returns the result as a {@link Map}.

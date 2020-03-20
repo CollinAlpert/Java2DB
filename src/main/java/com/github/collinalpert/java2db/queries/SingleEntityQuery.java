@@ -3,7 +3,7 @@ package com.github.collinalpert.java2db.queries;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.database.ForeignKeyReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.BaseMapper;
+import com.github.collinalpert.java2db.mappers.EntityMapper;
 import com.github.collinalpert.java2db.mappers.Mappable;
 import com.github.collinalpert.java2db.modules.FieldModule;
 import com.github.collinalpert.java2db.modules.TableModule;
@@ -14,9 +14,7 @@ import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
 import java.sql.SQLException;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * @author Collin Alpert
@@ -31,12 +29,11 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 
 	protected final Class<E> type;
 	protected final Mappable<E> mapper;
-	protected Map<String, String> aliases;
 	private SqlPredicate<E> whereClause;
 
 	public SingleEntityQuery(Class<E> type) {
 		this.type = type;
-		this.mapper = IoC.resolveMapper(type, new BaseMapper<>(type));
+		this.mapper = IoC.resolveMapper(type, new EntityMapper<>(type));
 	}
 
 	//region Configuration
@@ -85,7 +82,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	@Override
 	public Optional<E> first() {
 		try (var connection = new DBConnection()) {
-			return this.mapper.map(connection.execute(getQuery()), this.aliases);
+			return this.mapper.map(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
@@ -102,7 +99,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 		var builder = new StringBuilder("select ");
 		var fieldList = new LinkedList<String>();
 		var tableName = tableModule.getTableName(this.type);
-		var columns = FieldModule.getInstance().getAllFields(this.type);
+		var columns = FieldModule.getInstance().getColumnReferences(this.type);
 
 		var columnIterator = columns.iterator();
 		while (columnIterator.hasNext()) {
@@ -117,10 +114,6 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 		}
 
 		builder.append(String.join(", ", fieldList)).append(" from `").append(tableName).append("`");
-
-		if (this.aliases == null) {
-			aliases = columns.stream().filter(x -> x instanceof ForeignKeyReference).map(ForeignKeyReference.class::cast).collect(Collectors.toMap(f -> f.getColumn().getDeclaringClass().getSimpleName().toLowerCase() + "_" + f.getColumn().getName(), ForeignKeyReference::getForeignKeyAlias));
-		}
 
 		for (var column : columns) {
 			var foreignKey = (ForeignKeyReference) column;

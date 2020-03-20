@@ -5,7 +5,7 @@ import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import java.lang.reflect.Field;
 
 /**
- * Describes a foreign key reference to a specific table. This represents a field marked with the {@link com.github.collinalpert.java2db.annotations.ForeignKeyEntity} attribute.
+ * Describes a foreign key reference to a specific table. This represents a field marked with the {@link ForeignKeyEntity} attribute.
  *
  * @author Collin Alpert
  */

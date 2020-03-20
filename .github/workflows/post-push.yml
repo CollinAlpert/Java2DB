@@ -26,29 +26,6 @@ jobs:
           nexus_username: ${{ secrets.nexus_username }}
           nexus_password: ${{ secrets.nexus_password }}
 
-  github_deploy:
-    name: Deploy to GitHub Packages
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
-
-      - name: Setup JDK 13
-        uses: actions/setup-java@v1
-        with:
-          java-version: '13'
-
-      - name: Release to GitHub Package Registry
-        env:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          gpg_private_key: ${{ secrets.gpg_private_key }}
-          gpg_passphrase: ${{ secrets.gpg_passphrase }}
-        run: |
-          mkdir -p ~/.m2
-          echo "${gpg_private_key}" | gpg --batch --import
-          echo "<settings><servers><server><id>github</id><username>CollinAlpert</username><password>${github_token}</password></server></servers></settings>" > ~/.m2/settings.xml
-          mvn clean deploy -B -e -Dmaven.wagon.http.pool=false -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/CollinAlpert/Java2DB -Dgpg.passphrase=${gpg_passphrase}
-
   github_release:
     name: Create GitHub release
     runs-on: ubuntu-latest

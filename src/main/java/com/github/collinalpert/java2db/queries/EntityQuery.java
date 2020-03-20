@@ -209,7 +209,7 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	@Override
 	public List<E> toList() {
 		try (var connection = new DBConnection()) {
-			return super.mapper.mapToList(connection.execute(getQuery()), super.aliases);
+			return super.mapper.mapToList(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();
@@ -224,7 +224,7 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	@Override
 	public Stream<E> toStream() {
 		try (var connection = new DBConnection()) {
-			return super.mapper.mapToStream(connection.execute(getQuery()), super.aliases);
+			return super.mapper.mapToStream(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Stream.empty();
@@ -240,22 +240,11 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	@SuppressWarnings("unchecked")
 	public E[] toArray() {
 		try (var connection = new DBConnection()) {
-			return super.mapper.mapToArray(connection.execute(getQuery()), super.aliases);
+			return super.mapper.mapToArray(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return (E[]) Array.newInstance(super.type, 0);
 		}
-	}
-
-	/**
-	 * Executes a new query and returns the result as a {@link Map}. This method is equivalent to the call {@code Queryable#toMap(keyMapping, x -> x)}.
-	 *
-	 * @param keyMapping The field representing the keys of the map.
-	 * @return A map containing the result of the query.
-	 */
-	@Override
-	public <K> Map<K, E> toMap(Function<E, K> keyMapping) {
-		return this.toMap(keyMapping, x -> x);
 	}
 
 	/**
@@ -268,7 +257,7 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	@Override
 	public <K, V> Map<K, V> toMap(Function<E, K> keyMapping, Function<E, V> valueMapping) {
 		try (var connection = new DBConnection()) {
-			return super.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping, super.aliases);
+			return super.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyMap();
@@ -282,7 +271,7 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @return A string containing the clauses which can then be appended to the end of a DQL statement.
 	 */
 	@Override
-	String getQueryClauses(String tableName) {
+	protected String getQueryClauses(String tableName) {
 		var builder = new StringBuilder();
 
 		buildWhereClause(builder, tableName);

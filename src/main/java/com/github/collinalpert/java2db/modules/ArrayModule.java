@@ -52,7 +52,7 @@ public class ArrayModule<T> {
 			this.data = Arrays.copyOf(this.data, this.data.length + this.chunkSize);
 		}
 
-		this.data[counter++] = element;
+		this.data[this.counter++] = element;
 	}
 
 	/**

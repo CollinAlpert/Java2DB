@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>5.3.0</version>
+    <version>5.4.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -156,6 +156,9 @@ You can also check if a table has at least one row by calling `personService.any
 
 ### Duplicate value checking
 To check if a column's values are unique in a table, use the `hasDuplicates` method provided by the `BaseService`. It will return `true` if there is at least one duplicate value and false if all the values are unique.
+
+### Programmability
+The `DBConnection` class offers the possibility to call a stored procedure and a function. Simply use the `callStoredProcedure` or `callFunction` method, respectively and pass in the class you would like the result mapped to. Using the `@Ignore` annotation will also work with these kinds of calls. Please make sure your class has an empty constructor.   
 
 ### Asynchronous operations
 As of version 4.0 it is possible to execute all of the CRUD operations asynchronously. 

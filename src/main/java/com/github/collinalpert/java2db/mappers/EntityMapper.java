@@ -36,7 +36,7 @@ import static com.github.collinalpert.java2db.utilities.Utilities.tryGetValue;
  *
  * @author Collin Alpert
  */
-public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
+public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 
 	private static final TableModule tableModule;
 
@@ -45,9 +45,11 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	}
 
 	private Class<E> clazz;
+	private final Map<String, String> aliases;
 
-	public BaseMapper(Class<E> clazz) {
+	public EntityMapper(Class<E> clazz) {
 		this.clazz = clazz;
+		this.aliases = FieldModule.getInstance().getAliases(clazz);
 	}
 
 	/**
@@ -58,13 +60,13 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
 	@Override
-	public Optional<E> map(ResultSet set, Map<String, String> aliases) throws SQLException {
+	public Optional<E> map(ResultSet set) throws SQLException {
 		E entity = IoC.createInstance(this.clazz);
 		if (!set.next()) {
 			return Optional.empty();
 		}
 
-		setFields(set, entity, aliases);
+		setFields(set, entity);
 		set.close();
 		return Optional.of(entity);
 	}
@@ -77,9 +79,9 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
 	@Override
-	public List<E> mapToList(ResultSet set, Map<String, String> aliases) throws SQLException {
+	public List<E> mapToList(ResultSet set) throws SQLException {
 		var list = new ArrayList<E>();
-		mapInternal(set, list::add, aliases);
+		mapInternal(set, list::add);
 		return list;
 	}
 
@@ -91,9 +93,9 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
 	@Override
-	public Stream<E> mapToStream(ResultSet set, Map<String, String> aliases) throws SQLException {
+	public Stream<E> mapToStream(ResultSet set) throws SQLException {
 		var builder = Stream.<E>builder();
-		mapInternal(set, builder::add, aliases);
+		mapInternal(set, builder::add);
 		return builder.build();
 	}
 
@@ -105,9 +107,9 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @throws SQLException if the {@link ResultSet#next()} call does not work as expected or if the entity fields cannot be set.
 	 */
 	@Override
-	public E[] mapToArray(ResultSet set, Map<String, String> aliases) throws SQLException {
+	public E[] mapToArray(ResultSet set) throws SQLException {
 		var module = new ArrayModule<>(this.clazz, 20);
-		mapInternal(set, module::addElement, aliases);
+		mapInternal(set, module::addElement);
 		return module.getArray();
 	}
 
@@ -117,16 +119,15 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @param set          The {@code ResultSet} to get the data from.
 	 * @param keyMapping   The key function of the map.
 	 * @param valueMapping The value function of the map.
-	 * @param aliases      A map of column aliases needed to retrieve column data from the {@code ResultSet}.
 	 * @param <K>          The type of the keys in the map.
 	 * @param <V>          The type of the values in the map.
 	 * @return A {@code Map} containing the {@code ResultSet}s data.
 	 * @throws SQLException In case the {@code ResultSet} can't be read.
 	 */
 	@Override
-	public <K, V> Map<K, V> mapToMap(ResultSet set, Function<E, K> keyMapping, Function<E, V> valueMapping, Map<String, String> aliases) throws SQLException {
+	public <K, V> Map<K, V> mapToMap(ResultSet set, Function<E, K> keyMapping, Function<E, V> valueMapping) throws SQLException {
 		var map = new HashMap<K, V>();
-		mapInternal(set, x -> map.put(keyMapping.apply(x), valueMapping.apply(x)), aliases);
+		mapInternal(set, x -> map.put(keyMapping.apply(x), valueMapping.apply(x)));
 		return map;
 	}
 
@@ -137,10 +138,10 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @param handling The action to apply at each iteration of the given {@code ResultSet}.
 	 * @throws SQLException Handling a {@code ResultSet} can possibly result in this exception being thrown.
 	 */
-	private void mapInternal(ResultSet set, Consumer<E> handling, Map<String, String> aliases) throws SQLException {
+	private void mapInternal(ResultSet set, Consumer<E> handling) throws SQLException {
 		while (set.next()) {
 			var entity = IoC.createInstance(this.clazz);
-			setFields(set, entity, aliases);
+			setFields(set, entity);
 			handling.accept(entity);
 		}
 
@@ -153,8 +154,8 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @param set    The {@link ResultSet} to get the data from.
 	 * @param entity The Java entity to fill.
 	 */
-	private <TEntity extends BaseEntity> void setFields(ResultSet set, TEntity entity, Map<String, String> aliases) throws SQLException {
-		setFields(set, entity, tableModule.getTableName(entity.getClass()), aliases);
+	private <TEntity extends BaseEntity> void setFields(ResultSet set, TEntity entity) throws SQLException {
+		setFields(set, entity, tableModule.getTableName(entity.getClass()));
 	}
 
 	/**
@@ -164,7 +165,7 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @param identifier The alias set for a certain entity used as a nested property.
 	 * @param entity     The Java entity to fill.
 	 */
-	private <TEntity extends BaseEntity> void setFields(ResultSet set, TEntity entity, String identifier, Map<String, String> aliases) throws SQLException {
+	private <TEntity extends BaseEntity> void setFields(ResultSet set, TEntity entity, String identifier) throws SQLException {
 		var fieldModule = FieldModule.getInstance();
 		var fields = fieldModule.getEntityFields(entity.getClass(), true);
 		for (var field : fields) {
@@ -204,7 +205,7 @@ public class BaseMapper<E extends BaseEntity> implements Mappable<E> {
 
 				@SuppressWarnings("unchecked")
 				var foreignKeyObject = IoC.createInstance((Class<? extends BaseEntity>) field.getType());
-				setFields(set, foreignKeyObject, aliases.get(field.getDeclaringClass().getSimpleName().toLowerCase() + "_" + field.getName()), aliases);
+				setFields(set, foreignKeyObject, this.aliases.get(field.getDeclaringClass().getSimpleName().toLowerCase() + "_" + field.getName()));
 				tryAction(() -> field.set(entity, foreignKeyObject));
 
 				continue;

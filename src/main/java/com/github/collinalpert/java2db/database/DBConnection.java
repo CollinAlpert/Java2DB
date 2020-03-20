@@ -1,6 +1,11 @@
 package com.github.collinalpert.java2db.database;
 
 import com.github.collinalpert.java2db.exceptions.ConnectionFailedException;
+import com.github.collinalpert.java2db.mappers.FieldMapper;
+import com.github.collinalpert.java2db.queries.Queryable;
+import com.github.collinalpert.java2db.queries.StoredProcedureQuery;
+import com.github.collinalpert.java2db.queries.async.AsyncQueryable;
+import com.github.collinalpert.java2db.queries.async.AsyncStoredProcedureQuery;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
@@ -10,6 +15,12 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Optional;
+import java.util.StringJoiner;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
+import static com.github.collinalpert.java2db.utilities.Utilities.supplierHandling;
 
 /**
  * @author Collin Alpert
@@ -130,7 +141,7 @@ public class DBConnection implements Closeable {
 		var statement = this.connection.createStatement();
 		log(query);
 		statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
-		return updateHelper(statement);
+		return updateInternal(statement);
 	}
 
 	/**
@@ -149,17 +160,7 @@ public class DBConnection implements Closeable {
 
 		log(query);
 		statement.executeUpdate();
-		return updateHelper(statement);
-	}
-
-	private long updateHelper(Statement statement) throws SQLException {
-		statement.closeOnCompletion();
-		var set = statement.getGeneratedKeys();
-		if (set.next()) {
-			return set.getLong(1);
-		}
-
-		return -1;
+		return updateInternal(statement);
 	}
 
 	/**
@@ -194,14 +195,47 @@ public class DBConnection implements Closeable {
 		}
 	}
 
+	public <T> Optional<T> callFunction(Class<T> returnType, String functionName, Object... arguments) throws SQLException {
+		var joiner = new StringJoiner(",");
+		for (int i = 0; i < arguments.length; i++) {
+			joiner.add("?");
+		}
+
+		try (var set = execute(String.format("select %s(%s);", functionName, joiner.toString()), arguments)) {
+			return new FieldMapper<>(returnType).map(set);
+		}
+	}
+
+	public <T> CompletableFuture<Optional<T>> callFunctionAsync(Consumer<SQLException> exceptionHandler, Class<T> returnType, String functionName, Object... arguments) {
+		return CompletableFuture.supplyAsync(supplierHandling(() -> this.callFunction(returnType, functionName, arguments), exceptionHandler));
+	}
+
+	public <T> Queryable<T> callStoredProcedure(Class<T> returnType, String storedProcedureName, Object... arguments) {
+		return new StoredProcedureQuery<>(returnType, this, storedProcedureName, arguments);
+	}
+
+	public <T> AsyncQueryable<T> callStoredProcedureAsync(Class<T> returnType, String storedProcedureName, Object... arguments) {
+		return new AsyncStoredProcedureQuery<>(returnType, this, storedProcedureName, arguments);
+	}
+
 	/**
 	 * Prints queries to the console, while considering the {@link DBConnection#LOG_QUERIES} constant.
 	 *
 	 * @param text The message to print.
 	 */
 	private void log(String text) {
-		if (DBConnection.LOG_QUERIES) {
+		if (LOG_QUERIES) {
 			System.out.println(text);
 		}
+	}
+
+	private long updateInternal(Statement statement) throws SQLException {
+		statement.closeOnCompletion();
+		var set = statement.getGeneratedKeys();
+		if (set.next()) {
+			return set.getLong(1);
+		}
+
+		return -1;
 	}
 }
