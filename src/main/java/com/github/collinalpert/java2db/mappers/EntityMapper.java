@@ -2,6 +2,7 @@ package com.github.collinalpert.java2db.mappers;
 
 import com.github.collinalpert.java2db.annotations.ColumnName;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
+import com.github.collinalpert.java2db.annotations.ForeignKeyPath;
 import com.github.collinalpert.java2db.contracts.IdentifiableEnum;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.modules.AnnotationModule;
@@ -190,6 +191,14 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 							.findFirst();
 
 					foundEnum.ifPresent(identifiableEnum -> tryAction(() -> field.set(entity, field.getType().cast(identifiableEnum))));
+
+					continue;
+				}
+
+				var foreignKeyPathInfo = AnnotationModule.getInstance().getAnnotationInfo(field, ForeignKeyPath.class);
+				if (foreignKeyPathInfo.hasAnnotation()) {
+					var aliasKey = String.join("_", identifier, field.getName());
+					tryAction(() -> field.set(entity, set.getObject(this.aliases.get(aliasKey) + "_" + foreignKeyPathInfo.getAnnotation().value(), field.getType())));
 
 					continue;
 				}

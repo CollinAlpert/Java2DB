@@ -1,10 +1,12 @@
 package com.github.collinalpert.java2db.modules;
 
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
+import com.github.collinalpert.java2db.annotations.ForeignKeyPath;
 import com.github.collinalpert.java2db.annotations.Ignore;
 import com.github.collinalpert.java2db.database.ForeignKeyReference;
 import com.github.collinalpert.java2db.database.TableColumnReference;
 import com.github.collinalpert.java2db.entities.BaseEntity;
+import com.github.collinalpert.java2db.utilities.Utilities;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -94,8 +96,22 @@ public class FieldModule {
 			}
 
 			if (annotationModule.hasAnnotation(field, ForeignKeyEntity.class)) {
+				var foreignKeyPathInfo = annotationModule.getAnnotationInfo(field, ForeignKeyPath.class);
+				if (foreignKeyPathInfo.hasAnnotation()) {
+					var foreignKeyTableName = tableModule.getTableName(foreignKeyPathInfo.getAnnotation().foreignKeyClass());
+					var tempAlias = foreignKeyTableName.substring(0, 1) + ++aliasCounter;
+					var joinType = field.getAnnotation(ForeignKeyEntity.class).joinType();
+					fields.add(new ForeignKeyReference(tableModule.getTableName(instanceClass), alias, field, foreignKeyTableName, tempAlias, joinType));
+
+					var foreignKeyField = Utilities.tryGetValue(() -> foreignKeyPathInfo.getAnnotation().foreignKeyClass().getDeclaredField(foreignKeyPathInfo.getAnnotation().value()));
+					fields.add(new TableColumnReference(foreignKeyTableName, tempAlias, foreignKeyField));
+
+					continue;
+				}
+
 				var tempAlias = tableModule.getTableName(field.getType()).substring(0, 1) + ++aliasCounter;
-				fields.add(new ForeignKeyReference(tableModule.getTableName(instanceClass), alias, field, tableModule.getTableName(field.getType()), tempAlias));
+				var joinType = field.getAnnotation(ForeignKeyEntity.class).joinType();
+				fields.add(new ForeignKeyReference(tableModule.getTableName(instanceClass), alias, field, tableModule.getTableName(field.getType()), tempAlias, joinType));
 				fields.addAll(getColumnReferences((Class<? extends BaseEntity>) field.getType(), tempAlias, aliasCounter++));
 			} else {
 				fields.add(new TableColumnReference(tableModule.getTableName(instanceClass), alias, field));

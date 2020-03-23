@@ -10,7 +10,7 @@ public class SerializableBaseEntity extends BaseEntity implements Serializable {
 	private long id;
 
 	public long getId() {
-		return id;
+		return this.id;
 	}
 
 	/**

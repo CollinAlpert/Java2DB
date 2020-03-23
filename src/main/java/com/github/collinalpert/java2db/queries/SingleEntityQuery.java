@@ -117,7 +117,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 
 		for (var column : columns) {
 			var foreignKey = (ForeignKeyReference) column;
-			builder.append(" left join `").append(foreignKey.getForeignKeyTableName()).append("` ").append(foreignKey.getForeignKeyAlias()).append(" on `").append(foreignKey.getAlias()).append("`.`").append(foreignKey.getForeignKeyColumnName()).append("` = `").append(foreignKey.getForeignKeyAlias()).append("`.`id`");
+			builder.append(" ").append(foreignKey.getJoinType().getSqlKeyword()).append(" join `").append(foreignKey.getForeignKeyTableName()).append("` ").append(foreignKey.getForeignKeyAlias()).append(" on `").append(foreignKey.getAlias()).append("`.`").append(foreignKey.getForeignKeyColumnName()).append("` = `").append(foreignKey.getForeignKeyAlias()).append("`.`id`");
 		}
 
 		builder.append(getQueryClauses(tableName));

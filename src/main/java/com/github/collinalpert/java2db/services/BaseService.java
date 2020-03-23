@@ -772,13 +772,14 @@ public class BaseService<E extends BaseEntity> {
 	 * @param value The value to convert.
 	 * @return The SQL version of a Java value.
 	 */
+	//TODO add pattern matching when switching to Java 14
 	private String convertToSql(Object value) {
 		if (value == null) {
 			return "null";
 		}
 
 		if (value instanceof String) {
-			return "'" + value + "'";
+			return "'" + escapeString((String) value) + "'";
 		}
 
 		if (value instanceof Boolean) {
@@ -802,6 +803,16 @@ public class BaseService<E extends BaseEntity> {
 		}
 
 		return value.toString();
+	}
+
+	/**
+	 * Escapes characters in a String which would break an SQL statement, like a single quote or a backslash.
+	 *
+	 * @param input The string to escape characters in.
+	 * @return The same string but with escaped characters.
+	 */
+	private String escapeString(String input) {
+		return input.replace("\\", "\\\\").replace("'", "\\'");
 	}
 
 	/**

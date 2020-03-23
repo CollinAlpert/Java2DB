@@ -15,21 +15,33 @@ public class ForeignKeyReference extends TableColumnReference {
 	 * The table the foreign key refers to.
 	 */
 	private final String foreignKeyTableName;
+
 	/**
 	 * The name of the column which references the foreign table. Not to be confused with the column in the foreign table.
 	 */
 	private final String foreignKeyColumnName;
+
 	/**
 	 * An alias for the foreign key table name.
 	 */
-	private String foreignKeyAlias;
+	private final String foreignKeyAlias;
+
+	/**
+	 * The type of join to use.
+	 */
+	private final ForeignKeyEntity.JoinTypes joinType;
 
 
-	public ForeignKeyReference(String tableName, String alias, Field column, String foreignKeyTableName, String foreignKeyAlias) {
+	public ForeignKeyReference(String tableName, String alias, Field column, String foreignKeyTableName, String foreignKeyAlias, ForeignKeyEntity.JoinTypes joinType) {
 		super(tableName, alias, column);
 		this.foreignKeyTableName = foreignKeyTableName;
 		this.foreignKeyColumnName = column.getAnnotation(ForeignKeyEntity.class).value();
 		this.foreignKeyAlias = foreignKeyAlias;
+		this.joinType = joinType;
+	}
+
+	public ForeignKeyReference(String tableName, String alias, Field column, String foreignKeyTableName, String foreignKeyAlias) {
+		this(tableName, alias, column, foreignKeyTableName, foreignKeyAlias, ForeignKeyEntity.JoinTypes.LEFT);
 	}
 
 	public String getForeignKeyTableName() {
@@ -42,5 +54,9 @@ public class ForeignKeyReference extends TableColumnReference {
 
 	public String getForeignKeyAlias() {
 		return foreignKeyAlias;
+	}
+
+	public ForeignKeyEntity.JoinTypes getJoinType() {
+		return joinType;
 	}
 }

@@ -20,7 +20,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>5.4.0</version>
+    <version>5.5.0</version>
 </dependency>
 ```
 Or include the [JAR](https://github.com/CollinAlpert/Java2DB/releases/latest) in your project. 
@@ -120,6 +120,8 @@ To achieve asynchronous behavior, please read the [Asynchronous operations](#asy
 The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with the `toList`, `toStream`, `toArray` or `toMap` methods. You should only need this approach seldomly.\
 Much rather, use the `getSingle` or `getMultiple` methods. `getMultiple` returns an `EntityQuery` object with a preconfigured WHERE condition and then allows you to chain some additional query options. As of the current `EntityQuery` version, WHERE, LIMIT and ORDER BY are supported. With the ORDER BY functionality, there is also the possibility to coalesce multiple columns when ordering. Effectively, the calls `createQuery().where(predicate)` and `getMultiple(predicate)` are the same. The latter is recommended.\
 As previously mentioned, to execute the query and retrieve a result, use the `toList`, `toStream`, `toArray` or `toMap` methods.
+
+As shown in the example above, you can automatically join a table using the `@ForeignKeyEntity` annotation. You also have the option to specify which type of join to use when joining. If you would like only a specific column to be joined, say, the `code` field of the `gender` table, you can additionally specify the `@ForeignKeyPath` annotation. 
 
 #### Update
 Every service class has support for updating a single as well as multiple entities at once on the database.

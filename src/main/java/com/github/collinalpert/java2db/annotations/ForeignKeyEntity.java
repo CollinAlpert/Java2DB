@@ -23,4 +23,22 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ForeignKeyEntity {
 	String value();
+
+	JoinTypes joinType() default JoinTypes.LEFT;
+
+	enum JoinTypes {
+		LEFT("left"),
+		INNER("inner"),
+		RIGHT("right");
+
+		private final String sqlKeyword;
+
+		JoinTypes(String sqlKeyword) {
+			this.sqlKeyword = sqlKeyword;
+		}
+
+		public String getSqlKeyword() {
+			return sqlKeyword;
+		}
+	}
 }
