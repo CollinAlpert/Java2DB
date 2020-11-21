@@ -1,36 +1,21 @@
 package com.github.collinalpert.java2db.services;
 
-import com.github.collinalpert.java2db.annotations.Default;
-import com.github.collinalpert.java2db.annotations.DefaultIfNull;
+import com.github.collinalpert.java2db.annotations.*;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
-import com.github.collinalpert.java2db.modules.AnnotationModule;
-import com.github.collinalpert.java2db.modules.FieldModule;
-import com.github.collinalpert.java2db.modules.TableModule;
-import com.github.collinalpert.java2db.pagination.CacheablePaginationResult;
-import com.github.collinalpert.java2db.pagination.PaginationResult;
-import com.github.collinalpert.java2db.queries.EntityQuery;
-import com.github.collinalpert.java2db.queries.OrderTypes;
-import com.github.collinalpert.java2db.queries.SingleEntityQuery;
+import com.github.collinalpert.java2db.modules.*;
+import com.github.collinalpert.java2db.pagination.*;
+import com.github.collinalpert.java2db.queries.*;
 import com.github.collinalpert.java2db.utilities.FunctionUtils;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
-import com.github.collinalpert.lambda2sql.functions.SqlFunction;
-import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
+import com.github.collinalpert.lambda2sql.functions.*;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.*;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**

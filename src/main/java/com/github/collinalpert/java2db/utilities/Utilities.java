@@ -3,8 +3,7 @@ package com.github.collinalpert.java2db.utilities;
 import com.github.collinalpert.java2db.exceptions.AsynchronousOperationException;
 
 import java.sql.SQLException;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 /**
  * @author Collin Alpert

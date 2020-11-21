@@ -1,20 +1,11 @@
 package com.github.collinalpert.java2db.mappers;
 
-import com.github.collinalpert.java2db.modules.ArrayModule;
-import com.github.collinalpert.java2db.modules.FieldModule;
+import com.github.collinalpert.java2db.modules.*;
 import com.github.collinalpert.java2db.utilities.IoC;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import java.sql.*;
+import java.util.*;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 import static com.github.collinalpert.java2db.utilities.Utilities.tryAction;
@@ -136,6 +127,18 @@ public class FieldMapper<T> implements Mappable<T> {
 	@Override
 	public <K, V> Map<K, V> mapToMap(ResultSet set, Function<T, K> keyMapping, Function<T, V> valueMapping) throws SQLException {
 		return mapInternal(set, new HashMap<>(), (m, e) -> m.put(keyMapping.apply(e), valueMapping.apply(e)), Function.identity());
+	}
+
+	/**
+	 * Maps a {@code ResultSet} to a {@code Set}.
+	 *
+	 * @param set The {@code ResultSet} to get the data from.
+	 * @return A {@code Set} containing the {@code ResultSet}s data.
+	 * @throws SQLException In case the {@code ResultSet} can't be read.
+	 */
+	@Override
+	public Set<T> mapToSet(ResultSet set) throws SQLException {
+		return mapInternal(set, new HashSet<>(), Set::add, Function.identity());
 	}
 
 	/**

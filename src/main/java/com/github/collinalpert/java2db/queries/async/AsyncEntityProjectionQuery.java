@@ -1,8 +1,7 @@
 package com.github.collinalpert.java2db.queries.async;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.queries.EntityProjectionQuery;
-import com.github.collinalpert.java2db.queries.EntityQuery;
+import com.github.collinalpert.java2db.queries.*;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 /**

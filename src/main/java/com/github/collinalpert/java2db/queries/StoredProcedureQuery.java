@@ -1,19 +1,13 @@
 package com.github.collinalpert.java2db.queries;
 
 import com.github.collinalpert.java2db.database.DBConnection;
-import com.github.collinalpert.java2db.mappers.FieldMapper;
-import com.github.collinalpert.java2db.mappers.Mappable;
+import com.github.collinalpert.java2db.mappers.*;
 import com.github.collinalpert.java2db.utilities.ThrowableSupplier;
 
 import java.lang.reflect.Array;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.StringJoiner;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.*;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 /**
@@ -76,6 +70,16 @@ public class StoredProcedureQuery<T> implements Queryable<T> {
 	@Override
 	public <K, V> Map<K, V> toMap(Function<T, K> keyMapping, Function<T, V> valueMapping) {
 		return materializeInternal(() -> this.mapper.mapToMap(this.connection.execute(getQuery(), this.arguments), keyMapping, valueMapping), Collections::emptyMap);
+	}
+
+	/**
+	 * Executes the query and returns the result as a {@link Set}.
+	 *
+	 * @return A set of entities representing the result rows.
+	 */
+	@Override
+	public Set<T> toSet() {
+		return materializeInternal(() -> this.mapper.mapToSet(this.connection.execute(getQuery(), this.arguments)), Collections::emptySet);
 	}
 
 	/**

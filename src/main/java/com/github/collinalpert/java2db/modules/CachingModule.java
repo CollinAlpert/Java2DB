@@ -1,9 +1,7 @@
 package com.github.collinalpert.java2db.modules;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.*;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -14,7 +12,7 @@ import java.util.function.Supplier;
  */
 public class CachingModule<T> {
 
-	private Map<String, Entry> cacheEntries;
+	private final Map<String, Entry> cacheEntries;
 
 	public CachingModule() {
 		cacheEntries = new HashMap<>();

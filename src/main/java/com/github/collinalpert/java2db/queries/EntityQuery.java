@@ -4,17 +4,11 @@ import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
-import com.github.collinalpert.lambda2sql.functions.SqlFunction;
-import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
+import com.github.collinalpert.lambda2sql.functions.*;
 
 import java.lang.reflect.Array;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -261,6 +255,22 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyMap();
+		}
+	}
+
+	/**
+	 * Executes the query and returns the result as a {@link Set}.
+	 *
+	 * @return A set of entities representing the result rows.
+	 */
+	@Override
+	public Set<E> toSet() {
+		try (var connection = new DBConnection()) {
+			return super.mapper.mapToSet(connection.execute(getQuery()));
+		} catch (SQLException e) {
+			e.printStackTrace();
+
+			return Collections.emptySet();
 		}
 	}
 

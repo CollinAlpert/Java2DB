@@ -5,8 +5,7 @@ import com.github.collinalpert.java2db.mappers.Mappable;
 import com.github.collinalpert.java2db.services.BaseService;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * An <pre>Inversion of Control</pre> container.
@@ -16,8 +15,8 @@ import java.util.Map;
  */
 public final class IoC {
 
-	private static Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
-	private static Map<Class<? extends BaseEntity>, Mappable<? extends BaseEntity>> mappers;
+	private static final Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
+	private static final Map<Class<? extends BaseEntity>, Mappable<? extends BaseEntity>> mappers;
 
 
 	static {

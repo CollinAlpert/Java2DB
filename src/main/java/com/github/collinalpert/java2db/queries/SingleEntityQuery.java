@@ -1,20 +1,15 @@
 package com.github.collinalpert.java2db.queries;
 
-import com.github.collinalpert.java2db.database.DBConnection;
-import com.github.collinalpert.java2db.database.ForeignKeyReference;
+import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.mappers.EntityMapper;
-import com.github.collinalpert.java2db.mappers.Mappable;
-import com.github.collinalpert.java2db.modules.FieldModule;
-import com.github.collinalpert.java2db.modules.TableModule;
+import com.github.collinalpert.java2db.mappers.*;
+import com.github.collinalpert.java2db.modules.*;
 import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
-import com.github.collinalpert.lambda2sql.functions.SqlFunction;
-import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
+import com.github.collinalpert.lambda2sql.functions.*;
 
 import java.sql.SQLException;
-import java.util.LinkedList;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author Collin Alpert

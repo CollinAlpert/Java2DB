@@ -3,14 +3,10 @@ package com.github.collinalpert.java2db.services;
 import com.github.collinalpert.java2db.database.DBConnection;
 import com.github.collinalpert.java2db.entities.BaseDeletableEntity;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
-import com.github.collinalpert.lambda2sql.functions.SqlFunction;
-import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
+import com.github.collinalpert.lambda2sql.functions.*;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.StringJoiner;
+import java.util.*;
 
 /**
  * Describes a service class for an entity which contains an id and an isDeleted flag.

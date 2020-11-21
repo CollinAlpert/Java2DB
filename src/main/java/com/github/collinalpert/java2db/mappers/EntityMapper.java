@@ -1,32 +1,16 @@
 package com.github.collinalpert.java2db.mappers;
 
-import com.github.collinalpert.java2db.annotations.ColumnName;
-import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
-import com.github.collinalpert.java2db.annotations.ForeignKeyPath;
+import com.github.collinalpert.java2db.annotations.*;
 import com.github.collinalpert.java2db.contracts.IdentifiableEnum;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.modules.AnnotationModule;
-import com.github.collinalpert.java2db.modules.ArrayModule;
-import com.github.collinalpert.java2db.modules.FieldModule;
-import com.github.collinalpert.java2db.modules.TableModule;
+import com.github.collinalpert.java2db.modules.*;
 import com.github.collinalpert.java2db.utilities.IoC;
 
 import java.lang.reflect.Field;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.sql.*;
+import java.time.*;
+import java.util.*;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 import static com.github.collinalpert.java2db.utilities.Utilities.tryAction;
@@ -45,7 +29,7 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 		tableModule = TableModule.getInstance();
 	}
 
-	private Class<E> clazz;
+	private final Class<E> clazz;
 	private final Map<String, String> aliases;
 
 	public EntityMapper(Class<E> clazz) {
@@ -97,6 +81,7 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 	public Stream<E> mapToStream(ResultSet set) throws SQLException {
 		var builder = Stream.<E>builder();
 		mapInternal(set, builder::add);
+
 		return builder.build();
 	}
 
@@ -111,6 +96,7 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 	public E[] mapToArray(ResultSet set) throws SQLException {
 		var module = new ArrayModule<>(this.clazz, 20);
 		mapInternal(set, module::addElement);
+
 		return module.getArray();
 	}
 
@@ -129,7 +115,23 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 	public <K, V> Map<K, V> mapToMap(ResultSet set, Function<E, K> keyMapping, Function<E, V> valueMapping) throws SQLException {
 		var map = new HashMap<K, V>();
 		mapInternal(set, x -> map.put(keyMapping.apply(x), valueMapping.apply(x)));
+
 		return map;
+	}
+
+	/**
+	 * Maps a {@code ResultSet} to a {@code Set}.
+	 *
+	 * @param set The {@code ResultSet} to get the data from.
+	 * @return A {@code Set} containing the {@code ResultSet}s data.
+	 * @throws SQLException In case the {@code ResultSet} can't be read.
+	 */
+	@Override
+	public Set<E> mapToSet(ResultSet set) throws SQLException {
+		var hashSet = new HashSet<E>();
+		mapInternal(set, hashSet::add);
+
+		return hashSet;
 	}
 
 	/**

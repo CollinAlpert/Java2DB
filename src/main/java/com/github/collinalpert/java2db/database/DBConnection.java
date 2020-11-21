@@ -2,21 +2,14 @@ package com.github.collinalpert.java2db.database;
 
 import com.github.collinalpert.java2db.exceptions.ConnectionFailedException;
 import com.github.collinalpert.java2db.mappers.FieldMapper;
-import com.github.collinalpert.java2db.queries.Queryable;
-import com.github.collinalpert.java2db.queries.StoredProcedureQuery;
-import com.github.collinalpert.java2db.queries.async.AsyncQueryable;
-import com.github.collinalpert.java2db.queries.async.AsyncStoredProcedureQuery;
+import com.github.collinalpert.java2db.queries.*;
+import com.github.collinalpert.java2db.queries.async.*;
 import com.mysql.cj.exceptions.CJCommunicationsException;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
 import java.io.Closeable;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.sql.*;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -63,7 +56,7 @@ public class DBConnection implements Closeable {
 	 */
 	public static boolean LOG_QUERIES = true;
 
-	private Connection connection;
+	private Connection underlyingConnection;
 	private boolean isConnectionValid;
 
 	public DBConnection() {
@@ -73,7 +66,7 @@ public class DBConnection implements Closeable {
 			System.setProperty("user", USERNAME);
 			System.setProperty("password", PASSWORD);
 			DriverManager.setLoginTimeout(TIMEOUT);
-			connection = DriverManager.getConnection(connectionString, System.getProperties());
+			underlyingConnection = DriverManager.getConnection(connectionString, System.getProperties());
 			isConnectionValid = true;
 		} catch (CJCommunicationsException | CommunicationsException e) {
 			isConnectionValid = false;
@@ -82,6 +75,11 @@ public class DBConnection implements Closeable {
 			e.printStackTrace();
 			isConnectionValid = false;
 		}
+	}
+
+	public DBConnection(Connection underlyingConnection) {
+		this.underlyingConnection = underlyingConnection;
+		this.isConnectionValid = true;
 	}
 
 	/**
@@ -102,7 +100,7 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public ResultSet execute(String query) throws SQLException {
-		var statement = this.connection.createStatement();
+		var statement = this.underlyingConnection.createStatement();
 		log(query);
 		var set = statement.executeQuery(query);
 		statement.closeOnCompletion();
@@ -119,7 +117,7 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public ResultSet execute(String query, Object... params) throws SQLException {
-		var statement = this.connection.prepareStatement(query);
+		var statement = this.underlyingConnection.prepareStatement(query);
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
@@ -138,7 +136,7 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public long update(String query) throws SQLException {
-		var statement = this.connection.createStatement();
+		var statement = this.underlyingConnection.createStatement();
 		log(query);
 		statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
 		return updateInternal(statement);
@@ -153,7 +151,7 @@ public class DBConnection implements Closeable {
 	 * @throws SQLException if the query is malformed or cannot be executed.
 	 */
 	public long update(String query, Object... params) throws SQLException {
-		var statement = this.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+		var statement = this.underlyingConnection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 		for (int i = 0; i < params.length; i++) {
 			statement.setObject(i + 1, params[i]);
 		}
@@ -171,7 +169,7 @@ public class DBConnection implements Closeable {
 	 */
 	public boolean isOpen() {
 		try {
-			return !this.connection.isClosed();
+			return !this.underlyingConnection.isClosed();
 		} catch (SQLException e) {
 			System.err.println("Could not determine connection status");
 			return this.isConnectionValid = false;
@@ -184,8 +182,8 @@ public class DBConnection implements Closeable {
 	@Override
 	public void close() {
 		try {
-			if (this.connection != null) {
-				this.connection.close();
+			if (this.underlyingConnection != null) {
+				this.underlyingConnection.close();
 			}
 		} catch (SQLException e) {
 			System.err.println("Could not close database connection");
@@ -195,6 +193,16 @@ public class DBConnection implements Closeable {
 		}
 	}
 
+	/**
+	 * Calls an SQL function.
+	 *
+	 * @param returnType   The Java equivalent of the SQL datatype the function returns.
+	 * @param functionName The name of the function.
+	 * @param arguments    The arguments to be supplied to the function.
+	 * @param <T>          The functions return type.
+	 * @return The value of the function, as a Java datatype.
+	 * @throws SQLException In case there is an error communicating with the database, i.e. the function does not exist.
+	 */
 	public <T> Optional<T> callFunction(Class<T> returnType, String functionName, Object... arguments) throws SQLException {
 		var joiner = new StringJoiner(",");
 		for (int i = 0; i < arguments.length; i++) {
@@ -210,12 +218,20 @@ public class DBConnection implements Closeable {
 		return CompletableFuture.supplyAsync(supplierHandling(() -> this.callFunction(returnType, functionName, arguments), exceptionHandler));
 	}
 
+	public <T> CompletableFuture<Void> callFunctionAsync(Consumer<SQLException> exceptionHandler, Consumer<? super Optional<T>> callback, Class<T> returnType, String functionName, Object... arguments) {
+		return CompletableFuture.supplyAsync(supplierHandling(() -> this.callFunction(returnType, functionName, arguments), exceptionHandler)).thenAcceptAsync(callback);
+	}
+
 	public <T> Queryable<T> callStoredProcedure(Class<T> returnType, String storedProcedureName, Object... arguments) {
 		return new StoredProcedureQuery<>(returnType, this, storedProcedureName, arguments);
 	}
 
 	public <T> AsyncQueryable<T> callStoredProcedureAsync(Class<T> returnType, String storedProcedureName, Object... arguments) {
 		return new AsyncStoredProcedureQuery<>(returnType, this, storedProcedureName, arguments);
+	}
+
+	public Connection underlyingConnection() {
+		return this.underlyingConnection;
 	}
 
 	/**

@@ -1,9 +1,6 @@
 package com.github.collinalpert.java2db.annotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Marks a field as ignored, meaning it does not exist on the database or should not be filled with values.

@@ -3,8 +3,7 @@ package com.github.collinalpert.java2db.queries;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.lambda2sql.functions.SqlPredicate;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A class which administers default query constraints set for entities.
@@ -13,7 +12,7 @@ import java.util.Map;
  */
 public class QueryConstraints {
 
-	private static Map<Class<? extends BaseEntity>, SqlPredicate<? extends BaseEntity>> selectConstraints;
+	private static final Map<Class<? extends BaseEntity>, SqlPredicate<? extends BaseEntity>> selectConstraints;
 
 	static {
 		selectConstraints = new HashMap<>();

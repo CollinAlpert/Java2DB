@@ -7,14 +7,8 @@ import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 import java.lang.reflect.Array;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import java.util.*;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 /**
@@ -78,6 +72,16 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 			e.printStackTrace();
 			return Collections.emptyMap();
 		}
+	}
+
+	/**
+	 * Executes the query and returns the result as a {@link Set}.
+	 *
+	 * @return A set of entities representing the result rows.
+	 */
+	@Override
+	public Set<R> toSet() {
+		return resultHandling(new HashSet<>(), Set::add, Collections.emptySet(), Function.identity());
 	}
 
 	/**

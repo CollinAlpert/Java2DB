@@ -1,7 +1,6 @@
 package com.github.collinalpert.java2db.queries;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -52,4 +51,11 @@ public interface Queryable<T> extends SingleQueryable<T> {
 	 * @return A map containing the result of the query.
 	 */
 	<K, V> Map<K, V> toMap(Function<T, K> keyMapping, Function<T, V> valueMapping);
+
+	/**
+	 * Executes the query and returns the result as a {@link Set}.
+	 *
+	 * @return A set of entities representing the result rows.
+	 */
+	Set<T> toSet();
 }

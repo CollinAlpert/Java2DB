@@ -1,7 +1,6 @@
 package com.github.collinalpert.java2db.utilities;
 
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 /**
  * Simple hack to add checked error support to a {@link Supplier}s.
@@ -17,12 +16,18 @@ public interface ThrowableSupplier<T, E extends Throwable> extends Supplier<T> {
 
 	T fetch() throws E;
 
+	/**
+	 * Gets a result.
+	 *
+	 * @return a result
+	 */
 	@Override
 	default T get() {
 		try {
 			return fetch();
 		} catch (Throwable exception) {
 			exception.printStackTrace();
+
 			return null;
 		}
 	}

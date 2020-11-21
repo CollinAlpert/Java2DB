@@ -2,11 +2,9 @@ package com.github.collinalpert.java2db.queries.async;
 
 import com.github.collinalpert.java2db.queries.Queryable;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 /**
@@ -133,5 +131,27 @@ public interface AsyncQueryable<T> extends Queryable<T>, AsyncSingleQueryable<T>
 	 */
 	default <K, V> CompletableFuture<Void> toMapAsync(Function<T, K> keyMapping, Function<T, V> valueMapping, Consumer<? super Map<K, V>> callback) {
 		return toMapAsync(keyMapping, valueMapping).thenAcceptAsync(callback);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #toSet()} method.
+	 *
+	 * @return The asynchronous operation which will retrieve the data from the database.
+	 * Custom handling for the {@code CompletableFuture} can be done here.
+	 * @see #toSet()
+	 */
+	default CompletableFuture<Set<T>> toSetAsync() {
+		return CompletableFuture.supplyAsync(this::toSet);
+	}
+
+	/**
+	 * The asynchronous version of the {@link #toSet()} method.
+	 *
+	 * @param callback The action to be applied to the result once it is fetched from the database.
+	 * @return The asynchronous operation which will retrieve the data from the database and apply the given action to the result.
+	 * @see #toSet()
+	 */
+	default CompletableFuture<Void> toSetAsync(Consumer<? super Set<T>> callback) {
+		return toSetAsync().thenAcceptAsync(callback);
 	}
 }

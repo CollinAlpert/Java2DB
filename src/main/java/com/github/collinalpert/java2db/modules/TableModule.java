@@ -1,7 +1,6 @@
 package com.github.collinalpert.java2db.modules;
 
-import com.github.collinalpert.java2db.annotations.ColumnName;
-import com.github.collinalpert.java2db.annotations.TableName;
+import com.github.collinalpert.java2db.annotations.*;
 
 import java.lang.reflect.Field;
 

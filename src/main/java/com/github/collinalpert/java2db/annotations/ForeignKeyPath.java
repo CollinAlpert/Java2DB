@@ -2,10 +2,7 @@ package com.github.collinalpert.java2db.annotations;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * This annotation is used to indicate that only a specific column of a table is supposed to be joined when executing the query.

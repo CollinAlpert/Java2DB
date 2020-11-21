@@ -1,10 +1,7 @@
 package com.github.collinalpert.java2db.mappers;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.sql.*;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -74,4 +71,13 @@ public interface Mappable<T> {
 	 * @throws SQLException In case the {@code ResultSet} can't be read.
 	 */
 	<K, V> Map<K, V> mapToMap(ResultSet set, Function<T, K> keyMapping, Function<T, V> valueMapping) throws SQLException;
+
+	/**
+	 * Maps a {@code ResultSet} to a {@code Set}.
+	 *
+	 * @param set The {@code ResultSet} to get the data from.
+	 * @return A {@code Set} containing the {@code ResultSet}s data.
+	 * @throws SQLException In case the {@code ResultSet} can't be read.
+	 */
+	Set<T> mapToSet(ResultSet set) throws SQLException;
 }
