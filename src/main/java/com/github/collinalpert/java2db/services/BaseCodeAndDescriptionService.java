@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.services;
 
+import com.github.collinalpert.java2db.database.ConnectionConfiguration;
 import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionEntity;
 import com.github.collinalpert.java2db.queries.EntityQuery;
 
@@ -11,6 +12,10 @@ import java.util.Optional;
  * @author Collin Alpert
  */
 public class BaseCodeAndDescriptionService<T extends BaseCodeAndDescriptionEntity> extends BaseService<T> {
+
+	protected BaseCodeAndDescriptionService(ConnectionConfiguration connectionConfiguration) {
+		super(connectionConfiguration);
+	}
 
 	/**
 	 * Retrieves an entry from a table based on its unique code.

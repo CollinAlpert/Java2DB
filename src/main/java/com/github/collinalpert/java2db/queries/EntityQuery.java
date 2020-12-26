@@ -1,9 +1,14 @@
 package com.github.collinalpert.java2db.queries;
 
+import com.github.collinalpert.expressions.expression.LambdaExpression;
 import com.github.collinalpert.java2db.annotations.ForeignKeyEntity;
-import com.github.collinalpert.java2db.database.DBConnection;
+import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.lambda2sql.Lambda2Sql;
+import com.github.collinalpert.java2db.mappers.*;
+import com.github.collinalpert.java2db.modules.TableModule;
+import com.github.collinalpert.java2db.queries.builder.*;
+import com.github.collinalpert.java2db.queries.ordering.OrderTypes;
+import com.github.collinalpert.java2db.utilities.IoC;
 import com.github.collinalpert.lambda2sql.functions.*;
 
 import java.lang.reflect.Array;
@@ -18,12 +23,14 @@ import java.util.stream.Stream;
  *
  * @author Collin Alpert
  */
-public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> implements Queryable<E> {
+public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 
-	protected OrderTypes orderType = OrderTypes.ASCENDING;
-	private List<SqlFunction<E, ?>> orderByClause;
-	private Integer limit;
-	private int limitOffset;
+	private static final TableModule tableModule = TableModule.getInstance();
+	protected final ConnectionConfiguration connectionConfiguration;
+	protected final IQueryBuilder<E> queryBuilder;
+	protected final QueryParameters<E> queryParameters;
+	private final Class<E> type;
+	private final Mappable<E> mapper;
 
 	/**
 	 * Constructor for creating a DQL statement for a given entity.
@@ -31,11 +38,16 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 *
 	 * @param type The entity to query.
 	 */
-	public EntityQuery(Class<E> type) {
-		super(type);
+
+	public EntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
+		this.type = type;
+		this.connectionConfiguration = connectionConfiguration;
+		this.queryParameters = new QueryParameters<>();
+		this.mapper = IoC.resolveMapper(type, new EntityMapper<>(type));
+		this.queryBuilder = new EntityQueryBuilder<>(type);
 	}
 
-	//region Configuration
+	//region Where
 
 	/**
 	 * Sets or appends a WHERE clause for the DQL statement.
@@ -43,9 +55,8 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @param predicate The predicate describing the WHERE clause.
 	 * @return This {@link EntityQuery} object, now with an (appended) WHERE clause.
 	 */
-	@Override
 	public EntityQuery<E> where(SqlPredicate<E> predicate) {
-		super.where(predicate);
+		this.queryParameters.appendLogicalAndWhereClause(predicate);
 		return this;
 	}
 
@@ -55,10 +66,23 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @param predicate The predicate describing the OR WHERE clause.
 	 * @return This {@link EntityQuery} object, now with an (appended) OR WHERE clause.
 	 */
-	@Override
 	public EntityQuery<E> orWhere(SqlPredicate<E> predicate) {
-		super.orWhere(predicate);
+		this.queryParameters.appendLogicalOrWhereClause(predicate);
 		return this;
+	}
+
+	//endregion
+
+	//region Order By
+
+	/**
+	 * Sets a single column as the ORDER BY clause for the DQL statement in an ascending manner.
+	 *
+	 * @param function The column to order by.
+	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(SqlFunction<E, ?> function) {
+		return this.orderBy(function, OrderTypes.ASCENDING);
 	}
 
 	/**
@@ -67,12 +91,10 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @param function The column to order by.
 	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
-	public EntityQuery<E> orderBy(SqlFunction<E, ?> function) {
-		if (function == null) {
-			return this;
-		}
+	public EntityQuery<E> orderBy(SqlFunction<E, ?> function, OrderTypes orderType) {
+		this.queryParameters.setOrderByClause(function, orderType);
 
-		return this.orderBy(Collections.singletonList(function));
+		return this;
 	}
 
 	/**
@@ -86,7 +108,21 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 			return this;
 		}
 
-		return this.orderBy(Arrays.asList(functions));
+		return this.orderBy(Arrays.asList(functions), OrderTypes.ASCENDING);
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(SqlFunction<E, ?>[] functions, OrderTypes orderType) {
+		if (functions == null) {
+			return this;
+		}
+
+		return this.orderBy(Arrays.asList(functions), orderType);
 	}
 
 	/**
@@ -96,52 +132,108 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
 	 */
 	public EntityQuery<E> orderBy(List<SqlFunction<E, ?>> functions) {
-		this.orderByClause = functions;
-		return this;
+		return this.orderBy(functions, OrderTypes.ASCENDING);
 	}
 
 	/**
-	 * Sets an ORDER BY clauses for the DQL statement with a sorting order option.
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
 	 *
-	 * @param orderType The direction to order by. Can be either ascending or descending.
-	 * @param function  The column to order by.
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> orderBy(List<SqlFunction<E, ?>> functions, OrderTypes orderType) {
+		this.queryParameters.setOrderByClause(functions, orderType);
+
+		return this;
+	}
+
+	//endregion
+
+	//region Group By
+
+	public EntityQuery<E> groupBy(SqlFunction<E, ?> groupBy) {
+		this.queryParameters.setGroupBy(groupBy);
+
+		return this;
+	}
+
+	public EntityQuery<E> groupBy(SqlFunction<E, ?>... groupBy) {
+		this.queryParameters.setGroupBy(Arrays.asList(groupBy));
+
+		return this;
+	}
+
+	//endregion
+
+	//region Then By
+
+	/**
+	 * Sets a single column as the ORDER BY clause for the DQL statement in an ascending manner.
+	 *
+	 * @param function The column to order by.
 	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
-	public EntityQuery<E> orderBy(OrderTypes orderType, SqlFunction<E, ?> function) {
-		if (function == null) {
-			return this;
-		}
-
-		return this.orderBy(orderType, Collections.singletonList(function));
+	public EntityQuery<E> thenBy(SqlFunction<E, ?> function) {
+		return this.thenBy(function, OrderTypes.ASCENDING);
 	}
 
 	/**
-	 * Sets multiple ORDER BY clauses for the DQL statement with a sorting order option. The resulting ORDER BY statement will coalesce the passed columns.
+	 * Sets an ORDER BY clauses for the DQL statement.
 	 *
-	 * @param orderType The direction to order by. Can be either ascending or descending.
-	 * @param functions The columns to order by in a coalescing manner.
-	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 * @param function The column to order by.
+	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
-	public EntityQuery<E> orderBy(OrderTypes orderType, SqlFunction<E, ?>[] functions) {
-		if (functions == null) {
-			return this;
-		}
+	public EntityQuery<E> thenBy(SqlFunction<E, ?> function, OrderTypes orderType) {
+		this.queryParameters.addOrderByColumns(function, orderType);
 
-		return orderBy(orderType, Arrays.asList(functions));
-	}
-
-	/**
-	 * Sets multiple ORDER BY clauses for the DQL statement with a sorting order option. The resulting ORDER BY statement will coalesce the passed columns.
-	 *
-	 * @param orderType The direction to order by. Can be either ascending or descending.
-	 * @param functions The columns to order by in a coalescing manner.
-	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
-	 */
-	public EntityQuery<E> orderBy(OrderTypes orderType, List<SqlFunction<E, ?>> functions) {
-		this.orderType = orderType;
-		this.orderByClause = functions;
 		return this;
 	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> thenBy(SqlFunction<E, ?>[] functions) {
+		return this.thenBy(Arrays.asList(functions), OrderTypes.ASCENDING);
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> thenBy(SqlFunction<E, ?>[] functions, OrderTypes orderType) {
+		return this.thenBy(Arrays.asList(functions), orderType);
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> thenBy(List<SqlFunction<E, ?>> functions) {
+		return this.thenBy(functions, OrderTypes.ASCENDING);
+	}
+
+	/**
+	 * Sets multiple ORDER BY clauses for the DQL statement. The resulting ORDER BY statement will coalesce the passed columns.
+	 *
+	 * @param functions The columns to order by in a coalescing manner.
+	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
+	 */
+	public EntityQuery<E> thenBy(List<SqlFunction<E, ?>> functions, OrderTypes orderType) {
+		this.queryParameters.addOrderByColumns(functions, orderType);
+
+		return this;
+	}
+
+	//endregion
+
+	//region Limit
 
 	/**
 	 * Limits the result of the rows returned to a maximum of the passed integer with an offset.
@@ -152,8 +244,8 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @return This {@link EntityQuery} object, now with a LIMIT with an OFFSET.
 	 */
 	public EntityQuery<E> limit(int limit, int offset) {
-		this.limit = limit;
-		this.limitOffset = offset;
+		this.queryParameters.setLimit(limit);
+		this.queryParameters.setLimitOffset(offset);
 		return this;
 	}
 
@@ -164,7 +256,20 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @return This {@link EntityQuery} object, now with a LIMIT.
 	 */
 	public EntityQuery<E> limit(int limit) {
-		this.limit = limit;
+		this.queryParameters.setLimit(limit);
+		return this;
+	}
+
+	//endregion
+
+	/**
+	 * Adds a DISTINCT modifier to the query.
+	 *
+	 * @return This {@link EntityQuery} object, now with a DISTINCT clause.
+	 */
+	public EntityQuery<E> distinct() {
+		this.queryParameters.setDistinct();
+
 		return this;
 	}
 
@@ -175,13 +280,12 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 * @param <R>        The type of the column you want to retrieve.
 	 * @return A queryable containing the projection.
 	 */
-	@Override
 	public <R> Queryable<R> project(SqlFunction<E, R> projection) {
-		return new EntityProjectionQuery<>(projection, this);
+		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
+		var queryBuilder = new ProjectionQueryBuilder<>(projection, this.getTableName(), (QueryBuilder<E>) this.queryBuilder);
+
+		return new EntityProjectionQuery<>(returnType, queryBuilder, this.queryParameters, this.connectionConfiguration);
 	}
-
-	//endregion
-
 
 	/**
 	 * Gets the first record of a result. This method should be used when only one record is expected, i.e. when filtering by a unique identifier such as an id.
@@ -192,7 +296,12 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	@Override
 	public Optional<E> first() {
 		this.limit(1);
-		return super.first();
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			return this.mapper.map(connection.execute(getQuery()));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Optional.empty();
+		}
 	}
 
 	/**
@@ -202,8 +311,8 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 */
 	@Override
 	public List<E> toList() {
-		try (var connection = new DBConnection()) {
-			return super.mapper.mapToList(connection.execute(getQuery()));
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			return this.mapper.mapToList(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();
@@ -217,8 +326,8 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 */
 	@Override
 	public Stream<E> toStream() {
-		try (var connection = new DBConnection()) {
-			return super.mapper.mapToStream(connection.execute(getQuery()));
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			return this.mapper.mapToStream(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Stream.empty();
@@ -233,11 +342,11 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	@Override
 	@SuppressWarnings("unchecked")
 	public E[] toArray() {
-		try (var connection = new DBConnection()) {
-			return super.mapper.mapToArray(connection.execute(getQuery()));
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			return this.mapper.mapToArray(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
-			return (E[]) Array.newInstance(super.type, 0);
+			return (E[]) Array.newInstance(this.type, 0);
 		}
 	}
 
@@ -250,8 +359,8 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 */
 	@Override
 	public <K, V> Map<K, V> toMap(Function<E, K> keyMapping, Function<E, V> valueMapping) {
-		try (var connection = new DBConnection()) {
-			return super.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping);
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			return this.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyMap();
@@ -265,8 +374,8 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 	 */
 	@Override
 	public Set<E> toSet() {
-		try (var connection = new DBConnection()) {
-			return super.mapper.mapToSet(connection.execute(getQuery()));
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			return this.mapper.mapToSet(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 
@@ -274,39 +383,17 @@ public class EntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> impl
 		}
 	}
 
-	/**
-	 * Creates the query clauses for a DQL statement. This contains constraints like a WHERE, an ORDER BY and a LIMIT statement.
-	 *
-	 * @param tableName The table name which is targeted.
-	 * @return A string containing the clauses which can then be appended to the end of a DQL statement.
-	 */
 	@Override
-	protected String getQueryClauses(String tableName) {
-		var builder = new StringBuilder();
+	public String getQuery() {
+		return this.queryBuilder.build(this.queryParameters);
+	}
 
-		buildWhereClause(builder, tableName);
-
-		if (this.orderByClause != null && this.orderByClause.size() > 0) {
-			builder.append(" order by ");
-
-			if (this.orderByClause.size() == 1) {
-				builder.append(Lambda2Sql.toSql(this.orderByClause.get(0), tableName));
-			} else {
-				var joiner = new StringJoiner(", ", "coalesce(", ")");
-				for (SqlFunction<E, ?> orderByFunction : this.orderByClause) {
-					joiner.add(Lambda2Sql.toSql(orderByFunction, tableName));
-				}
-
-				builder.append(joiner.toString());
-			}
-
-			builder.append(" ").append(this.orderType.getSql());
-		}
-
-		if (this.limit != null) {
-			builder.append(" limit ").append(this.limitOffset).append(", ").append(this.limit);
-		}
-
-		return builder.toString();
+	/**
+	 * Gets the table name which this query targets.
+	 *
+	 * @return The table name which this query targets.
+	 */
+	protected String getTableName() {
+		return tableModule.getTableName(this.type);
 	}
 }

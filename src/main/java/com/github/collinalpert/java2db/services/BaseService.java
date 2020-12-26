@@ -1,12 +1,13 @@
 package com.github.collinalpert.java2db.services;
 
 import com.github.collinalpert.java2db.annotations.*;
-import com.github.collinalpert.java2db.database.DBConnection;
+import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.exceptions.IllegalEntityFieldAccessException;
 import com.github.collinalpert.java2db.modules.*;
 import com.github.collinalpert.java2db.pagination.*;
 import com.github.collinalpert.java2db.queries.*;
+import com.github.collinalpert.java2db.queries.ordering.OrderTypes;
 import com.github.collinalpert.java2db.utilities.FunctionUtils;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.*;
@@ -55,13 +56,19 @@ public class BaseService<E extends BaseEntity> {
 	private final String idAccess;
 
 	/**
+	 * The properties this service needs to access the database.
+	 */
+	protected final ConnectionConfiguration connectionConfiguration;
+
+	/**
 	 * Constructor for the base class of all services. It is not possible to create instances of it.
 	 */
-	protected BaseService() {
+	protected BaseService(ConnectionConfiguration connectionConfiguration) {
+		this.connectionConfiguration = connectionConfiguration;
 		this.type = getGenericType();
 		this.tableName = tableModule.getTableName(this.type);
 
-		final SqlFunction<E, Long> idFunc = BaseEntity::getId;
+		final SqlFunction<E, Integer> idFunc = BaseEntity::getId;
 		this.idAccess = Lambda2Sql.toSql(idFunc, this.tableName);
 	}
 
@@ -75,7 +82,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type or a foreign key constraint.
 	 */
-	public long create(E instance) throws SQLException {
+	public int create(E instance) throws SQLException {
 		var insertQuery = createInsertHeader();
 		var joiner = new StringJoiner(", ", "(", ");");
 		fieldModule.getEntityFields(instance.getClass(), BaseEntity.class).forEach(field -> {
@@ -91,7 +98,7 @@ public class BaseService<E extends BaseEntity> {
 		//For using the default database setting for the id.
 		joiner.add("default");
 		insertQuery.append(joiner.toString());
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			var id = connection.update(insertQuery.toString());
 			instance.setId(id);
 			return id;
@@ -148,7 +155,7 @@ public class BaseService<E extends BaseEntity> {
 		}
 
 		insertQuery.append(String.join(", ", rows));
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(insertQuery.toString());
 		}
 	}
@@ -165,7 +172,7 @@ public class BaseService<E extends BaseEntity> {
 	 *
 	 * @return The amount of rows in this table.
 	 */
-	public long count() {
+	public int count() {
 		return count(x -> true);
 	}
 
@@ -175,11 +182,11 @@ public class BaseService<E extends BaseEntity> {
 	 * @param predicate The condition to test for.
 	 * @return The number of rows matching the condition.
 	 */
-	public long count(SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection()) {
+	public int count(SqlPredicate<E> predicate) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			try (var result = connection.execute(String.format("select count(%s) from `%s` where %s;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
-					return result.getLong(String.format("count(%s)", this.idAccess));
+					return result.getInt(String.format("count(%s)", this.idAccess));
 				}
 
 				return 0;
@@ -209,7 +216,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @return {@code True} if the predicate matches one or more records, {@code false} if not.
 	 */
 	public boolean any(SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			try (var result = connection.execute(String.format("select exists(select %s from `%s` where %s limit 1) as result;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
 					return result.getInt("result") == 1;
@@ -246,9 +253,11 @@ public class BaseService<E extends BaseEntity> {
 	 * @return The maximum value of the column.
 	 */
 	public <T> T max(SqlFunction<E, T> column, SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			try (var result = connection.execute(String.format("select max(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
+					// This is needed to find the generic type at runtime.
+
 					return (T) result.getObject(1);
 				}
 
@@ -285,7 +294,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @return The minimum value of the column.
 	 */
 	public <T> T min(SqlFunction<E, T> column, SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			try (var result = connection.execute(String.format("select min(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
 				if (result.next()) {
 					return (T) result.getObject(1);
@@ -310,7 +319,7 @@ public class BaseService<E extends BaseEntity> {
 	 */
 	public boolean hasDuplicates(SqlFunction<E, ?> column) {
 		var sqlColumn = Lambda2Sql.toSql(column, this.tableName);
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			try (var result = connection.execute(String.format("select %s from `%s` group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn))) {
 				return result.next();
 			}
@@ -329,7 +338,7 @@ public class BaseService<E extends BaseEntity> {
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected EntityQuery<E> createQuery() {
-		return new EntityQuery<>(this.type);
+		return new EntityQuery<>(this.type, this.connectionConfiguration);
 	}
 
 	/**
@@ -338,7 +347,7 @@ public class BaseService<E extends BaseEntity> {
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected SingleEntityQuery<E> createSingleQuery() {
-		return new SingleEntityQuery<>(this.type);
+		return new SingleEntityQuery<>(this.type, this.connectionConfiguration);
 	}
 
 	/**
@@ -375,7 +384,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @param id The id of the desired entity.
 	 * @return Gets an entity by its id.
 	 */
-	public Optional<E> getById(long id) {
+	public Optional<E> getById(int id) {
 		return getFirst(x -> x.getId() == id);
 	}
 
@@ -393,7 +402,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
 	public List<E> getAll(SqlFunction<E, ?> orderBy) {
-		return createQuery().orderBy(orderBy).toList();
+		return createQuery().orderBy(orderBy, OrderTypes.ASCENDING).toList();
 	}
 
 	/**
@@ -403,7 +412,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in an ascending order.
 	 */
 	public List<E> getAll(SqlFunction<E, ?>[] orderBy) {
-		return createQuery().orderBy(orderBy).toList();
+		return createQuery().orderBy(orderBy, OrderTypes.ASCENDING).toList();
 	}
 
 	/**
@@ -413,8 +422,8 @@ public class BaseService<E extends BaseEntity> {
 	 * @param sortingType The order direction. Can be either ascending or descending.
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
-	public List<E> getAll(OrderTypes sortingType, SqlFunction<E, ?> orderBy) {
-		return createQuery().orderBy(sortingType, orderBy).toList();
+	public List<E> getAll(SqlFunction<E, ?> orderBy, OrderTypes sortingType) {
+		return createQuery().orderBy(orderBy, sortingType).toList();
 	}
 
 	/**
@@ -425,8 +434,8 @@ public class BaseService<E extends BaseEntity> {
 	 * @return A list of all records ordered by a specific property in the specified order.
 	 */
 
-	public List<E> getAll(OrderTypes sortingType, SqlFunction<E, ?>[] orderBy) {
-		return createQuery().orderBy(sortingType, orderBy).toList();
+	public List<E> getAll(SqlFunction<E, ?>[] orderBy, OrderTypes sortingType) {
+		return createQuery().orderBy(orderBy, sortingType).toList();
 	}
 
 	//endregion EntityQuery
@@ -508,7 +517,7 @@ public class BaseService<E extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(E instance) throws SQLException {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(updateQuery(instance));
 		}
 	}
@@ -535,7 +544,7 @@ public class BaseService<E extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(List<E> instances) throws SQLException {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			for (E instance : instances) {
 				connection.update(updateQuery(instance));
 			}
@@ -564,11 +573,11 @@ public class BaseService<E extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
-	public <R> void update(long entityId, SqlFunction<E, R> column, SqlFunction<E, R> newValueFunction) throws SQLException {
+	public <R> void update(int entityId, SqlFunction<E, R> column, SqlFunction<E, R> newValueFunction) throws SQLException {
 		SqlPredicate<E> predicate = x -> x.getId() == entityId;
 		var query = String.format("update `%s` set %s = %s where %s", this.tableName, Lambda2Sql.toSql(column, this.tableName), Lambda2Sql.toSql(newValueFunction, this.tableName), Lambda2Sql.toSql(predicate, this.tableName));
 
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(query);
 		}
 	}
@@ -584,7 +593,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @throws SQLException if the query cannot be executed due to database constraints
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
-	public <R> void update(long entityId, SqlFunction<E, R> column, R newValue) throws SQLException {
+	public <R> void update(int entityId, SqlFunction<E, R> column, R newValue) throws SQLException {
 		update(x -> x.getId() == entityId, column, newValue);
 	}
 
@@ -602,7 +611,7 @@ public class BaseService<E extends BaseEntity> {
 	public <R> void update(SqlPredicate<E> condition, SqlFunction<E, R> column, R newValue) throws SQLException {
 		var query = String.format("update `%s` set %s = %s where %s;", this.tableName, Lambda2Sql.toSql(column, this.tableName), convertToSql(newValue), Lambda2Sql.toSql(condition, this.tableName));
 
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(query);
 		}
 	}
@@ -628,7 +637,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @param id The row with this id to delete.
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
-	public void delete(long id) throws SQLException {
+	public void delete(int id) throws SQLException {
 		delete(x -> x.getId() == id);
 	}
 
@@ -641,11 +650,11 @@ public class BaseService<E extends BaseEntity> {
 	public void delete(List<E> entities) throws SQLException {
 		var joiner = new StringJoiner(", ", "(", ")");
 		for (var entity : entities) {
-			joiner.add(Long.toString(entity.getId()));
+			joiner.add(Integer.toString(entity.getId()));
 		}
 
 		var joinedIds = joiner.toString();
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(String.format("delete from `%s` where %s in %s", this.tableName, this.idAccess, joinedIds));
 		}
 	}
@@ -668,9 +677,9 @@ public class BaseService<E extends BaseEntity> {
 	 * @param ids The ids to delete the rows by.
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
-	public void delete(long... ids) throws SQLException {
-		var list = new ArrayList<Long>(ids.length);
-		for (long id : ids) {
+	public void delete(int... ids) throws SQLException {
+		var list = new ArrayList<Integer>(ids.length);
+		for (var id : ids) {
 			list.add(id);
 		}
 
@@ -684,7 +693,7 @@ public class BaseService<E extends BaseEntity> {
 	 * @throws SQLException in case the condition cannot be applied or if a foreign key constraint fails.
 	 */
 	public void delete(SqlPredicate<E> predicate) throws SQLException {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 		}
 	}
@@ -697,7 +706,7 @@ public class BaseService<E extends BaseEntity> {
 	 *                      command and cannot check if rows are being referenced or not.
 	 */
 	public void truncateTable() throws SQLException {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			connection.update(String.format("truncate table `%s`;", this.tableName));
 		}
 	}

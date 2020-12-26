@@ -1,34 +1,38 @@
 package com.github.collinalpert.java2db.queries;
 
+import com.github.collinalpert.expressions.expression.LambdaExpression;
 import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.mappers.*;
-import com.github.collinalpert.java2db.modules.*;
+import com.github.collinalpert.java2db.modules.TableModule;
+import com.github.collinalpert.java2db.queries.builder.*;
 import com.github.collinalpert.java2db.utilities.IoC;
-import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.*;
 
+import java.lang.reflect.Array;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * @author Collin Alpert
  */
-public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<E> {
+public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 
-	protected static final TableModule tableModule;
+	private static final TableModule tableModule = TableModule.getInstance();
+	protected final QueryParameters<E> queryParameters;
+	protected final IQueryBuilder<E> queryBuilder;
+	protected final ConnectionConfiguration connectionConfiguration;
+	private final Class<E> type;
+	private final Mappable<E> mapper;
 
-	static {
-		tableModule = TableModule.getInstance();
-	}
-
-	protected final Class<E> type;
-	protected final Mappable<E> mapper;
-	private SqlPredicate<E> whereClause;
-
-	public SingleEntityQuery(Class<E> type) {
+	public SingleEntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
 		this.type = type;
+		this.queryParameters = new QueryParameters<>();
 		this.mapper = IoC.resolveMapper(type, new EntityMapper<>(type));
+		this.queryBuilder = new SingleEntityQueryBuilder<>(type);
+		this.connectionConfiguration = connectionConfiguration;
 	}
 
 	//region Configuration
@@ -40,7 +44,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	 * @return This {@link EntityQuery} object, now with an (appended) WHERE clause.
 	 */
 	public SingleEntityQuery<E> where(SqlPredicate<E> predicate) {
-		this.whereClause = this.whereClause == null ? predicate : this.whereClause.and(predicate);
+		this.queryParameters.appendLogicalAndWhereClause(predicate);
 		return this;
 	}
 
@@ -51,7 +55,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	 * @return This {@link EntityQuery} object, now with an (appended) OR WHERE clause.
 	 */
 	public SingleEntityQuery<E> orWhere(SqlPredicate<E> predicate) {
-		this.whereClause = this.whereClause == null ? predicate : this.whereClause.or(predicate);
+		this.queryParameters.appendLogicalOrWhereClause(predicate);
 		return this;
 	}
 
@@ -62,8 +66,11 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	 * @param <R>        The type of the column you want to retrieve.
 	 * @return A queryable containing the projection.
 	 */
-	public <R> SingleQueryable<R> project(SqlFunction<E, R> projection) {
-		return new SingleEntityProjectionQuery<>(projection, this);
+	public <R> Queryable<R> project(SqlFunction<E, R> projection) {
+		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
+		var queryBuilder = new ProjectionQueryBuilder<>(projection, this.getTableName(), (QueryBuilder<E>) this.queryBuilder);
+
+		return new SingleEntityProjectionQuery<>(returnType, queryBuilder, this.queryParameters, this.connectionConfiguration);
 	}
 
 	//endregion
@@ -76,11 +83,101 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	 */
 	@Override
 	public Optional<E> first() {
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
 			return this.mapper.map(connection.execute(getQuery()));
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
+		}
+	}
+
+	/**
+	 * Executes the query and returns the result as a {@link List}.
+	 *
+	 * @return A list of entities representing the result rows.
+	 */
+	@Override
+	public List<E> toList() {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			var mappedValue = this.mapper.map(connection.execute(getQuery()));
+			return mappedValue.map(Collections::singletonList).orElse(Collections.emptyList());
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Collections.emptyList();
+		}
+	}
+
+	/**
+	 * Executes the query and returns the result as a {@link Stream}.
+	 *
+	 * @return A list of entities representing the result rows.
+	 */
+	@Override
+	public Stream<E> toStream() {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			var mappedValue = this.mapper.map(connection.execute(getQuery()));
+			return mappedValue.stream();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Stream.empty();
+		}
+	}
+
+	/**
+	 * Executes a new query and returns the result as an array.
+	 *
+	 * @return An array of entities representing the result rows.
+	 */
+	@Override
+	@SuppressWarnings("unchecked")
+	public E[] toArray() {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			var mappedValue = this.mapper.map(connection.execute(getQuery()));
+
+			return mappedValue.map(v -> {
+				var array = (E[]) Array.newInstance(this.type, 1);
+				array[0] = v;
+
+				return array;
+			}).orElse((E[]) Array.newInstance(this.type, 0));
+		} catch (SQLException e) {
+			e.printStackTrace();
+
+			return (E[]) Array.newInstance(this.type, 0);
+		}
+	}
+
+	/**
+	 * Executes a new query and returns the result as a {@link Map}.
+	 *
+	 * @param keyMapping   The field representing the keys of the map.
+	 * @param valueMapping The field representing the values of the map.
+	 * @return A map containing the result of the query.
+	 */
+	@Override
+	public <K, V> Map<K, V> toMap(Function<E, K> keyMapping, Function<E, V> valueMapping) {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			var mappedValue = this.mapper.map(connection.execute(getQuery()));
+			return mappedValue.map(v -> Collections.singletonMap(keyMapping.apply(v), valueMapping.apply(v))).orElse(Collections.emptyMap());
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Collections.emptyMap();
+		}
+	}
+
+	/**
+	 * Executes the query and returns the result as a {@link Set}.
+	 *
+	 * @return A set of entities representing the result rows.
+	 */
+	@Override
+	public Set<E> toSet() {
+		try (var connection = new DBConnection(this.connectionConfiguration)) {
+			var mappedValue = this.mapper.map(connection.execute(getQuery()));
+			return mappedValue.map(Collections::singleton).orElse(Collections.emptySet());
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Collections.emptySet();
 		}
 	}
 
@@ -91,62 +188,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	 */
 	@Override
 	public String getQuery() {
-		var builder = new StringBuilder("select ");
-		var fieldList = new LinkedList<String>();
-		var tableName = tableModule.getTableName(this.type);
-		var columns = FieldModule.getInstance().getColumnReferences(this.type);
-
-		var columnIterator = columns.iterator();
-		while (columnIterator.hasNext()) {
-			var column = columnIterator.next();
-			if (column instanceof ForeignKeyReference) {
-				continue;
-			}
-
-			fieldList.add(String.format("%s as %s", column.getSQLNotation(), column.getAliasNotation()));
-			// Remove TableColumnReferences so we end up only with the foreign keys.
-			columnIterator.remove();
-		}
-
-		builder.append(String.join(", ", fieldList)).append(" from `").append(tableName).append("`");
-
-		for (var column : columns) {
-			var foreignKey = (ForeignKeyReference) column;
-			builder.append(" ").append(foreignKey.getJoinType().getSqlKeyword()).append(" join `").append(foreignKey.getForeignKeyTableName()).append("` ").append(foreignKey.getForeignKeyAlias()).append(" on `").append(foreignKey.getAlias()).append("`.`").append(foreignKey.getForeignKeyColumnName()).append("` = `").append(foreignKey.getForeignKeyAlias()).append("`.`id`");
-		}
-
-		builder.append(getQueryClauses(tableName));
-
-		return builder.toString();
-	}
-
-	String getQueryClauses(String tableName) {
-		var builder = new StringBuilder();
-
-		buildWhereClause(builder, tableName);
-
-		// Since we only want to fetch one result anyway.
-		builder.append(" limit 1");
-
-		return builder.toString();
-	}
-
-	/**
-	 * Builds the WHERE clause in a select statement.
-	 *
-	 * @param builder   The {@code StringBuilder} to append the clause to.
-	 * @param tableName The name of the table the where clause will affect.
-	 */
-	protected void buildWhereClause(StringBuilder builder, String tableName) {
-		var constraints = QueryConstraints.getConstraints(this.type);
-		var clauseCopy = this.whereClause;
-		if (clauseCopy == null) {
-			clauseCopy = constraints;
-		} else {
-			clauseCopy = clauseCopy.and(constraints);
-		}
-
-		builder.append(" where ").append(Lambda2Sql.toSql(clauseCopy, tableName));
+		return this.queryBuilder.build(this.queryParameters);
 	}
 
 	/**
@@ -154,7 +196,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements SingleQueryable<
 	 *
 	 * @return The table name which this query targets.
 	 */
-	public String getTableName() {
+	protected String getTableName() {
 		return tableModule.getTableName(this.type);
 	}
 }

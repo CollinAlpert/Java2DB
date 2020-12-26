@@ -23,6 +23,9 @@ public @interface ForeignKeyEntity {
 
 	JoinTypes joinType() default JoinTypes.LEFT;
 
+	/**
+	 * An enum for specifying the type of join to use when leveraging the automatic join feature via the {@link ForeignKeyEntity} attribute.
+	 */
 	enum JoinTypes {
 		LEFT("left"),
 		INNER("inner"),

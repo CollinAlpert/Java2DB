@@ -1,9 +1,9 @@
 package com.github.collinalpert.java2db.queries;
 
-import com.github.collinalpert.java2db.database.DBConnection;
+import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.modules.ArrayModule;
-import com.github.collinalpert.lambda2sql.functions.SqlFunction;
+import com.github.collinalpert.java2db.queries.builder.IQueryBuilder;
 
 import java.lang.reflect.Array;
 import java.sql.SQLException;
@@ -18,16 +18,33 @@ import java.util.stream.Stream;
  * @param <R> The return type of the projection this query represents.
  * @author Collin Alpert
  */
-public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntityProjectionQuery<E, R> implements Queryable<R> {
+public class EntityProjectionQuery<E extends BaseEntity, R> implements Queryable<R> {
 
-	public EntityProjectionQuery(SqlFunction<E, R> projection, EntityQuery<E> originalQuery) {
-		super(projection, originalQuery);
+	private final Class<R> returnType;
+	private final IQueryBuilder<E> queryBuilder;
+	private final QueryParameters<E> queryParameters;
+	private final ConnectionConfiguration connectionConfiguration;
+
+	public EntityProjectionQuery(Class<R> returnType, IQueryBuilder<E> queryBuilder, QueryParameters<E> queryParameters, ConnectionConfiguration connectionConfiguration) {
+		this.returnType = returnType;
+		this.queryBuilder = queryBuilder;
+		this.queryParameters = queryParameters;
+		this.connectionConfiguration = connectionConfiguration;
 	}
 
 	@Override
 	public Optional<R> first() {
-		((EntityQuery<E>) originalQuery).limit(1);
-		return super.first();
+		try (var connection = new DBConnection(this.connectionConfiguration);
+			 var result = connection.execute(getQuery())) {
+			if (result.next()) {
+				return Optional.ofNullable(result.getObject(1, this.returnType));
+			}
+
+			return Optional.empty();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Optional.empty();
+		}
 	}
 
 	@Override
@@ -44,9 +61,9 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 
 	@Override
 	public R[] toArray() {
-		var arrayModule = new ArrayModule<>(super.returnType, 20);
+		var arrayModule = new ArrayModule<>(this.returnType, 20);
 		@SuppressWarnings("unchecked")
-		var defaultValue = (R[]) Array.newInstance(super.returnType, 0);
+		var defaultValue = (R[]) Array.newInstance(this.returnType, 0);
 		return resultHandling(arrayModule, ArrayModule::addElement, defaultValue, ArrayModule::getArray);
 	}
 
@@ -59,19 +76,7 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 	 */
 	@Override
 	public <K, V> Map<K, V> toMap(Function<R, K> keyMapping, Function<R, V> valueMapping) {
-		var map = new HashMap<K, V>();
-		try (var connection = new DBConnection();
-			 var result = connection.execute(getQuery())) {
-			while (result.next()) {
-				var currentValue = result.getObject(1, super.returnType);
-				map.put(keyMapping.apply(currentValue), valueMapping.apply(currentValue));
-			}
-
-			return map;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return Collections.emptyMap();
-		}
+		return resultHandling(new HashMap<>(), (m, v) -> m.put(keyMapping.apply(v), valueMapping.apply(v)), Collections.emptyMap(), Function.identity());
 	}
 
 	/**
@@ -82,6 +87,11 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 	@Override
 	public Set<R> toSet() {
 		return resultHandling(new HashSet<>(), Set::add, Collections.emptySet(), Function.identity());
+	}
+
+	@Override
+	public String getQuery() {
+		return this.queryBuilder.build(this.queryParameters);
 	}
 
 	/**
@@ -96,10 +106,10 @@ public class EntityProjectionQuery<E extends BaseEntity, R> extends SingleEntity
 	 * @return A data structure containing a {@code ResultSet}s data.
 	 */
 	private <T, D> T resultHandling(D dataStructure, BiConsumer<D, R> valueConsumer, T defaultValue, Function<D, T> valueMapping) {
-		try (var connection = new DBConnection();
+		try (var connection = new DBConnection(this.connectionConfiguration);
 			 var result = connection.execute(getQuery())) {
 			while (result.next()) {
-				valueConsumer.accept(dataStructure, result.getObject(1, super.returnType));
+				valueConsumer.accept(dataStructure, result.getObject(1, this.returnType));
 			}
 
 			return valueMapping.apply(dataStructure);

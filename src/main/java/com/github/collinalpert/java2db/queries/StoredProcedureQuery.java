@@ -30,6 +30,17 @@ public class StoredProcedureQuery<T> implements Queryable<T> {
 	}
 
 	/**
+	 * Gets the first value from the database result. This method should be used when only one result is expected.
+	 *
+	 * @return The first row as an entity wrapped in an {@link Optional} if there is at least one row.
+	 * Otherwise {@link Optional#empty()} is returned. If the value from the database is {@code null}, an empty {@code Optional} is also returned.
+	 */
+	@Override
+	public Optional<T> first() {
+		return materializeInternal(() -> this.mapper.map(this.connection.execute(getQuery(), this.arguments)), Optional::empty);
+	}
+
+	/**
 	 * Executes the query and returns the result as a {@link List}.
 	 *
 	 * @return A list of entities representing the result rows.
@@ -80,17 +91,6 @@ public class StoredProcedureQuery<T> implements Queryable<T> {
 	@Override
 	public Set<T> toSet() {
 		return materializeInternal(() -> this.mapper.mapToSet(this.connection.execute(getQuery(), this.arguments)), Collections::emptySet);
-	}
-
-	/**
-	 * Gets the first value from the database result. This method should be used when only one result is expected.
-	 *
-	 * @return The first row as an entity wrapped in an {@link Optional} if there is at least one row.
-	 * Otherwise {@link Optional#empty()} is returned. If the value from the database is {@code null}, an empty {@code Optional} is also returned.
-	 */
-	@Override
-	public Optional<T> first() {
-		return materializeInternal(() -> this.mapper.map(this.connection.execute(getQuery(), this.arguments)), Optional::empty);
 	}
 
 	/**

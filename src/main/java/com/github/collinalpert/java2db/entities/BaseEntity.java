@@ -1,6 +1,5 @@
 package com.github.collinalpert.java2db.entities;
 
-
 /**
  * Describes an entity that has an id. Every entity must inherit from this class.
  *
@@ -8,20 +7,20 @@ package com.github.collinalpert.java2db.entities;
  */
 public class BaseEntity {
 
-	private long id;
+	private int id;
 
-	public long getId() {
+	public int getId() {
 		return id;
 	}
 
 	/**
-	 * This setter only exists for frameworks like Spring, where a form needs to set this id.
+	 * This setter only exists for frameworks like@ Spring, where a form needs to set this id.
 	 * It is <b>greatly</b> discouraged from using this setter directly and it's effects will not be considered with any of the CRUD operations.
 	 *
 	 * @param id The id of the entity.
 	 */
 	@Deprecated
-	public void setId(long id) {
+	public void setId(int id) {
 		this.id = id;
 	}
 
@@ -47,6 +46,6 @@ public class BaseEntity {
 
 	@Override
 	public int hashCode() {
-		return (int) (this.id ^ (this.id >>> 32));
+		return this.id;
 	}
 }

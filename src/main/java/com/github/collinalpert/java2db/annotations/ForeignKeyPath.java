@@ -6,7 +6,7 @@ import java.lang.annotation.*;
 
 /**
  * This annotation is used to indicate that only a specific column of a table is supposed to be joined when executing the query.
- * It has to be used in conjunction with the {@link ForeignKeyEntity} attribute.
+ * It must be used in conjunction with the {@link ForeignKeyEntity} attribute.
  *
  * @author Collin Alpert
  */

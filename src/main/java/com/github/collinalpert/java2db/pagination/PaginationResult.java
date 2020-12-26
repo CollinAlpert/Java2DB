@@ -1,7 +1,8 @@
 package com.github.collinalpert.java2db.pagination;
 
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.queries.*;
+import com.github.collinalpert.java2db.queries.EntityQuery;
+import com.github.collinalpert.java2db.queries.ordering.OrderTypes;
 import com.github.collinalpert.lambda2sql.functions.SqlFunction;
 
 import java.util.List;
@@ -56,7 +57,7 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public List<T> getPage(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).orderBy(this.orderType, this.orderFunctions).toList();
+		return queries.get(number - 1).orderBy(this.orderFunctions, this.orderType).toList();
 	}
 
 	/**
@@ -79,7 +80,7 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public Stream<T> getPageAsStream(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).orderBy(this.orderType, this.orderFunctions).toStream();
+		return queries.get(number - 1).orderBy(this.orderFunctions, this.orderType).toStream();
 	}
 
 	/**
@@ -102,7 +103,7 @@ public class PaginationResult<T extends BaseEntity> {
 	 */
 	public T[] getPageAsArray(int number) {
 		pageNumberCheck(number);
-		return queries.get(number - 1).orderBy(this.orderType, this.orderFunctions).toArray();
+		return queries.get(number - 1).orderBy(this.orderFunctions, this.orderType).toArray();
 	}
 
 	/**

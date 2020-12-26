@@ -1,7 +1,11 @@
 package com.github.collinalpert.java2db.queries.async;
 
+import com.github.collinalpert.expressions.expression.LambdaExpression;
+import com.github.collinalpert.java2db.database.ConnectionConfiguration;
 import com.github.collinalpert.java2db.entities.BaseEntity;
-import com.github.collinalpert.java2db.queries.*;
+import com.github.collinalpert.java2db.queries.EntityQuery;
+import com.github.collinalpert.java2db.queries.builder.*;
+import com.github.collinalpert.java2db.queries.ordering.OrderTypes;
 import com.github.collinalpert.java2db.services.BaseService;
 import com.github.collinalpert.lambda2sql.functions.*;
 
@@ -17,8 +21,8 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 *
 	 * @param type The entity to query.
 	 */
-	public AsyncEntityQuery(Class<E> type) {
-		super(type);
+	public AsyncEntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
+		super(type, connectionConfiguration);
 	}
 
 	/**
@@ -53,7 +57,7 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 */
 	@Override
 	public AsyncEntityQuery<E> orderBy(SqlFunction<E, ?> function) {
-		super.orderBy(function);
+		super.orderBy(function, OrderTypes.ASCENDING);
 		return this;
 	}
 
@@ -65,7 +69,7 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 */
 	@Override
 	public AsyncEntityQuery<E> orderBy(SqlFunction<E, ?>[] functions) {
-		super.orderBy(functions);
+		super.orderBy(functions, OrderTypes.ASCENDING);
 		return this;
 	}
 
@@ -77,20 +81,21 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 */
 	@Override
 	public AsyncEntityQuery<E> orderBy(List<SqlFunction<E, ?>> functions) {
-		super.orderBy(functions);
+		super.orderBy(functions, OrderTypes.ASCENDING);
 		return this;
 	}
 
 	/**
 	 * Sets an ORDER BY clauses for the DQL statement with a sorting order option.
 	 *
-	 * @param orderType The direction to order by. Can be either ascending or descending.
 	 * @param function  The column to order by.
+	 * @param orderType The direction to order by. Can be either ascending or descending.
 	 * @return This {@link EntityQuery} object, now with a ORDER BY clause.
 	 */
 	@Override
-	public AsyncEntityQuery<E> orderBy(OrderTypes orderType, SqlFunction<E, ?> function) {
-		super.orderBy(orderType, function);
+	public AsyncEntityQuery<E> orderBy(SqlFunction<E, ?> function, OrderTypes orderType) {
+		super.orderBy(function, orderType);
+
 		return this;
 	}
 
@@ -102,8 +107,9 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
 	 */
 	@Override
-	public AsyncEntityQuery<E> orderBy(OrderTypes orderType, SqlFunction<E, ?>[] functions) {
-		super.orderBy(orderType, functions);
+	public AsyncEntityQuery<E> orderBy(SqlFunction<E, ?>[] functions, OrderTypes orderType) {
+		super.orderBy(functions, orderType);
+
 		return this;
 	}
 
@@ -115,8 +121,8 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 * @return This {@link EntityQuery} object, now with a coalesced ORDER BY clause.
 	 */
 	@Override
-	public AsyncEntityQuery<E> orderBy(OrderTypes orderType, List<SqlFunction<E, ?>> functions) {
-		super.orderBy(orderType, functions);
+	public AsyncEntityQuery<E> orderBy(List<SqlFunction<E, ?>> functions, OrderTypes orderType) {
+		super.orderBy(functions, orderType);
 		return this;
 	}
 
@@ -152,6 +158,9 @@ public class AsyncEntityQuery<E extends BaseEntity> extends EntityQuery<E> imple
 	 * @return A queryable containing the projection.
 	 */
 	public <R> AsyncQueryable<R> project(SqlFunction<E, R> projection) {
-		return new AsyncEntityProjectionQuery<>(projection, this);
+		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
+		var queryBuilder = new ProjectionQueryBuilder<>(projection, super.getTableName(), (QueryBuilder<E>) super.queryBuilder);
+
+		return new AsyncEntityProjectionQuery<>(returnType, queryBuilder, super.queryParameters, super.connectionConfiguration);
 	}
 }

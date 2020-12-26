@@ -71,11 +71,11 @@ public class CachingModule<T> {
 		}
 
 		public T getValue() {
-			return value;
+			return this.value;
 		}
 
 		private boolean isExpired() {
-			return LocalDateTime.now().isAfter(expirationDate);
+			return LocalDateTime.now().isAfter(this.expirationDate);
 		}
 	}
 }

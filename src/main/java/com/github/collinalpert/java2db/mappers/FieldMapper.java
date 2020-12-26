@@ -11,31 +11,33 @@ import java.util.stream.Stream;
 import static com.github.collinalpert.java2db.utilities.Utilities.tryAction;
 
 /**
+ * Maps a {@link ResultSet} into fields of an object or into simple types.
+ *
  * @author Collin Alpert
  */
 public class FieldMapper<T> implements Mappable<T> {
 
-	private static final Set<Class<?>> singleValueTypes;
+	private static final Set<Class<?>> simpleValueTypes;
 
 	static {
-		singleValueTypes = new HashSet<>();
-		singleValueTypes.add(String.class);
-		singleValueTypes.add(Byte.class);
-		singleValueTypes.add(byte.class);
-		singleValueTypes.add(Short.class);
-		singleValueTypes.add(short.class);
-		singleValueTypes.add(Integer.class);
-		singleValueTypes.add(int.class);
-		singleValueTypes.add(Long.class);
-		singleValueTypes.add(long.class);
-		singleValueTypes.add(Double.class);
-		singleValueTypes.add(double.class);
-		singleValueTypes.add(Float.class);
-		singleValueTypes.add(float.class);
-		singleValueTypes.add(Boolean.class);
-		singleValueTypes.add(boolean.class);
-		singleValueTypes.add(Character.class);
-		singleValueTypes.add(char.class);
+		simpleValueTypes = new HashSet<>();
+		simpleValueTypes.add(String.class);
+		simpleValueTypes.add(Byte.class);
+		simpleValueTypes.add(byte.class);
+		simpleValueTypes.add(Short.class);
+		simpleValueTypes.add(short.class);
+		simpleValueTypes.add(Integer.class);
+		simpleValueTypes.add(int.class);
+		simpleValueTypes.add(Long.class);
+		simpleValueTypes.add(long.class);
+		simpleValueTypes.add(Double.class);
+		simpleValueTypes.add(double.class);
+		simpleValueTypes.add(Float.class);
+		simpleValueTypes.add(float.class);
+		simpleValueTypes.add(Boolean.class);
+		simpleValueTypes.add(boolean.class);
+		simpleValueTypes.add(Character.class);
+		simpleValueTypes.add(char.class);
 	}
 
 	private final Class<T> underlyingClass;
@@ -54,10 +56,11 @@ public class FieldMapper<T> implements Mappable<T> {
 	 */
 	@Override
 	public Optional<T> map(ResultSet set) throws SQLException {
-		if (singleValueTypes.contains(this.underlyingClass)) {
+		if (simpleValueTypes.contains(this.underlyingClass)) {
 			if (set.next()) {
 				return Optional.ofNullable(set.getObject(1, this.underlyingClass));
 			} else {
+				set.close();
 				return Optional.empty();
 			}
 		}
@@ -70,8 +73,11 @@ public class FieldMapper<T> implements Mappable<T> {
 				tryAction(() -> field.set(instance, set.getObject(field.getName(), field.getType())));
 			}
 
+			set.close();
 			return Optional.of(instance);
 		}
+
+		set.close();
 
 		return Optional.empty();
 	}
@@ -154,7 +160,7 @@ public class FieldMapper<T> implements Mappable<T> {
 	 * @throws SQLException In case the {@code ResultSet} can't be read.
 	 */
 	private <R, O> R mapInternal(ResultSet set, O container, BiConsumer<O, T> addFunction, Function<O, R> returnFunction) throws SQLException {
-		if (singleValueTypes.contains(this.underlyingClass)) {
+		if (simpleValueTypes.contains(this.underlyingClass)) {
 			while (set.next()) {
 				addFunction.accept(container, set.getObject(1, this.underlyingClass));
 			}
@@ -171,6 +177,8 @@ public class FieldMapper<T> implements Mappable<T> {
 
 			addFunction.accept(container, instance);
 		}
+
+		set.close();
 
 		return returnFunction.apply(container);
 	}

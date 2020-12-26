@@ -7,7 +7,15 @@ import java.util.stream.Stream;
 /**
  * @author Collin Alpert
  */
-public interface Queryable<T> extends SingleQueryable<T> {
+public interface Queryable<T> {
+
+	/**
+	 * Gets the first value from the database result. This method should be used when only one result is expected.
+	 *
+	 * @return The first row as an entity wrapped in an {@link Optional} if there is at least one row.
+	 * Otherwise {@link Optional#empty()} is returned. If the value from the database is {@code null}, an empty {@code Optional} is also returned.
+	 */
+	Optional<T> first();
 
 	/**
 	 * Executes the query and returns the result as a {@link List}.
@@ -58,4 +66,11 @@ public interface Queryable<T> extends SingleQueryable<T> {
 	 * @return A set of entities representing the result rows.
 	 */
 	Set<T> toSet();
+
+	/**
+	 * Responsible for building and returning the individual DQL statement.
+	 *
+	 * @return The DQL statement which fetches data from the database.
+	 */
+	String getQuery();
 }

@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.services;
 
-import com.github.collinalpert.java2db.database.DBConnection;
+import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseDeletableEntity;
 import com.github.collinalpert.lambda2sql.Lambda2Sql;
 import com.github.collinalpert.lambda2sql.functions.*;
@@ -18,6 +18,10 @@ import java.util.*;
 public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseService<T> {
 
 	private final SqlFunction<T, Boolean> isDeletedFunc = BaseDeletableEntity::isDeleted;
+
+	protected BaseDeletableService(ConnectionConfiguration connectionConfiguration) {
+		super(connectionConfiguration);
+	}
 
 	/**
 	 * Performs a soft delete on an entity instead of completely deleting it from the database.
@@ -37,7 +41,7 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	@Override
-	public void delete(long id) throws SQLException {
+	public void delete(int id) throws SQLException {
 		super.update(id, this.isDeletedFunc, true);
 	}
 
@@ -51,11 +55,11 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 	public void delete(List<T> entities) throws SQLException {
 		var joiner = new StringJoiner(", ", "(", ")");
 		for (T entity : entities) {
-			joiner.add(Long.toString(entity.getId()));
+			joiner.add(Integer.toString(entity.getId()));
 		}
 
 		var joinedIds = joiner.toString();
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(super.connectionConfiguration)) {
 			connection.update(String.format("update `%s` set %s = 1 where `%s`.`id` in %s", this.tableName, Lambda2Sql.toSql(this.isDeletedFunc, this.tableName), this.tableName, joinedIds));
 		}
 	}
@@ -79,9 +83,9 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 	 * @throws SQLException for example because of a foreign key constraint.
 	 */
 	@Override
-	public void delete(long... ids) throws SQLException {
-		var list = new ArrayList<Long>(ids.length);
-		for (long id : ids) {
+	public void delete(int... ids) throws SQLException {
+		var list = new ArrayList<Integer>(ids.length);
+		for (var id : ids) {
 			list.add(id);
 		}
 
@@ -97,7 +101,7 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 	@Override
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		var query = String.format("update %s set %s = 1 where %s", super.tableName, Lambda2Sql.toSql(this.isDeletedFunc, super.tableName), Lambda2Sql.toSql(predicate));
-		try (var connection = new DBConnection()) {
+		try (var connection = new DBConnection(super.connectionConfiguration)) {
 			connection.update(query);
 		}
 	}

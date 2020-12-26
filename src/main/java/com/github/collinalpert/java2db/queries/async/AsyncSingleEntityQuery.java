@@ -1,16 +1,19 @@
 package com.github.collinalpert.java2db.queries.async;
 
+import com.github.collinalpert.expressions.expression.LambdaExpression;
+import com.github.collinalpert.java2db.database.ConnectionConfiguration;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.queries.*;
+import com.github.collinalpert.java2db.queries.builder.*;
 import com.github.collinalpert.lambda2sql.functions.*;
 
 /**
  * @author Collin Alpert
  */
-public class AsyncSingleEntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> implements AsyncSingleQueryable<E> {
+public class AsyncSingleEntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> implements AsyncQueryable<E> {
 
-	public AsyncSingleEntityQuery(Class<E> type) {
-		super(type);
+	public AsyncSingleEntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
+		super(type, connectionConfiguration);
 	}
 
 	/**
@@ -45,7 +48,10 @@ public class AsyncSingleEntityQuery<E extends BaseEntity> extends SingleEntityQu
 	 * @return A queryable containing the projection.
 	 */
 	@Override
-	public <R> AsyncSingleQueryable<R> project(SqlFunction<E, R> projection) {
-		return new AsyncSingleEntityProjectionQuery<>(projection, this);
+	public <R> AsyncQueryable<R> project(SqlFunction<E, R> projection) {
+		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
+		var queryBuilder = new ProjectionQueryBuilder<>(projection, super.getTableName(), (QueryBuilder<E>) super.queryBuilder);
+
+		return new AsyncSingleEntityProjectionQuery<>(returnType, queryBuilder, super.queryParameters, super.connectionConfiguration);
 	}
 }

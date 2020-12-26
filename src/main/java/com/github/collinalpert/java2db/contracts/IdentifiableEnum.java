@@ -7,5 +7,5 @@ package com.github.collinalpert.java2db.contracts;
  * @author Collin Alpert
  */
 public interface IdentifiableEnum {
-	long getId();
+	int getId();
 }

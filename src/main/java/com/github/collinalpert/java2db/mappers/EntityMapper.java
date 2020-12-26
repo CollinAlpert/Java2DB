@@ -23,18 +23,15 @@ import static com.github.collinalpert.java2db.utilities.Utilities.tryGetValue;
  */
 public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 
-	private static final TableModule tableModule;
-
-	static {
-		tableModule = TableModule.getInstance();
-	}
+	private static final TableModule tableModule = TableModule.getInstance();
+	private static final FieldModule fieldModule = FieldModule.getInstance();
 
 	private final Class<E> clazz;
 	private final Map<String, String> aliases;
 
 	public EntityMapper(Class<E> clazz) {
 		this.clazz = clazz;
-		this.aliases = FieldModule.getInstance().getAliases(clazz);
+		this.aliases = fieldModule.getAliases(clazz);
 	}
 
 	/**
@@ -169,7 +166,6 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 	 * @param entity     The Java entity to fill.
 	 */
 	private <TEntity extends BaseEntity> void setFields(ResultSet set, TEntity entity, String identifier) throws SQLException {
-		var fieldModule = FieldModule.getInstance();
 		var fields = fieldModule.getEntityFields(entity.getClass(), true);
 		for (var field : fields) {
 			field.setAccessible(true);
@@ -189,7 +185,7 @@ public class EntityMapper<E extends BaseEntity> implements Mappable<E> {
 
 					var foundEnum = Arrays.stream(field.getType().getEnumConstants())
 							.map(x -> (IdentifiableEnum) x)
-							.filter(x -> Long.parseLong(value.toString()) == x.getId())
+							.filter(x -> Integer.parseInt(value.toString()) == x.getId())
 							.findFirst();
 
 					foundEnum.ifPresent(identifiableEnum -> tryAction(() -> field.set(entity, field.getType().cast(identifiableEnum))));

@@ -33,6 +33,10 @@ public class Utilities {
 		};
 	}
 
+	public static <V> Supplier<V> supplierHandling(ThrowableSupplier<V, SQLException> supplier) {
+		return supplierHandling(supplier, null);
+	}
+
 	/**
 	 * Handles an {@code SQLException} that gets thrown inside a {@code Runnable}.
 	 *

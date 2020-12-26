@@ -1,5 +1,6 @@
 package com.github.collinalpert.java2db.services;
 
+import com.github.collinalpert.java2db.database.ConnectionConfiguration;
 import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionDeletableEntity;
 import com.github.collinalpert.java2db.queries.EntityQuery;
 
@@ -13,6 +14,10 @@ import java.util.Optional;
  * @author Collin Alpert
  */
 public class BaseCodeAndDescriptionDeletableService<T extends BaseCodeAndDescriptionDeletableEntity> extends BaseDeletableService<T> {
+
+	protected BaseCodeAndDescriptionDeletableService(ConnectionConfiguration connectionConfiguration) {
+		super(connectionConfiguration);
+	}
 
 	/**
 	 * Retrieves an entry from a table based on its unique code.

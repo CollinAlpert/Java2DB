@@ -3,13 +3,15 @@ package com.github.collinalpert.java2db.entities;
 import java.io.Serializable;
 
 /**
+ * Use this class when you need your objects to be automatically serializable.
+ *
  * @author Collin Alpert
  */
 public class SerializableBaseEntity extends BaseEntity implements Serializable {
 
-	private long id;
+	private int id;
 
-	public long getId() {
+	public int getId() {
 		return this.id;
 	}
 
@@ -20,7 +22,7 @@ public class SerializableBaseEntity extends BaseEntity implements Serializable {
 	 * @param id The id of the entity.
 	 */
 	@Deprecated
-	public void setId(long id) {
+	public void setId(int id) {
 		this.id = id;
 	}
 
@@ -46,6 +48,6 @@ public class SerializableBaseEntity extends BaseEntity implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return (int) (this.id ^ (this.id >>> 32));
+		return this.id;
 	}
 }
