@@ -154,15 +154,6 @@ As shown in the example above, you can automatically join a table using the `@Fo
 have the option to specify which type of join to use when joining. If you would like only a specific column to be
 joined, say, the `code` field of the `gender` table, you can additionally specify the `@ForeignKeyPath` annotation.
 
-#### Order By
-
-ORDER BY clauses changed in version 6.0.0. Now, there are two methods you are able to use on ``Querable``s.
-The `orderBy` method sets the ORDER BY clause for the statement. The `thenBy` method adds a column to this clause. Note,
-that when calling `orderBy`, it overwrites the previously set clause, so make sure you use only `thenBy` after
-calling `orderBy`.\ Both methods also accept multiple columns. If you supply more than one column to either method, they
-will be coalesced (using the COALESCE function), meaning the first column which is not `null` will be taken into
-account.
-
 #### Update
 
 Every service class has support for updating a single as well as multiple entities at once on the database. Check out
@@ -177,6 +168,15 @@ Every service class has support for deleting a single as well as multiple entiti
 asynchronous behavior, please read the [Asynchronous operations](#asynchronous-operations) section. Check out the
 different `delete` methods provided by your service class. To include support for soft-deletion, please read
 the [Common structures](#common-structures) section.
+
+#### Order By
+
+ORDER BY clauses changed in version 6.0.0. Now, there are two methods you are able to use on ``Querable``s.
+The `orderBy` method sets the ORDER BY clause for the statement. The `thenBy` method adds a column to this clause. Note,
+that when calling `orderBy`, it overwrites the previously set clause, so make sure you use only `thenBy` after
+calling `orderBy`.\
+Both methods also accept multiple columns. If you supply more than one column to either method, they will be coalesced (
+using the COALESCE function), meaning the first column which is not `null` will be taken into account.
 
 ### LIKE operations
 
