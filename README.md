@@ -125,9 +125,11 @@ public class PersonService extends BaseService<Person> {
 Every service *must* extend `BaseService`.
 
 That's it! Now we can get data from the database using the services using simple methods like `getById` and so on.\
-As you can see from the example, custom methods can be defined in the respective service using the `getSingle` or `getMultiple` methods provided by the `BaseService`.
+As you can see from the example, custom methods can be defined in the respective service using the `getSingle`
+or `getMultiple` methods provided by the `BaseService`.
 
-The last thing you need to do is give Java2DB access to your database. Set the static variables `HOST`, `DATABASE`, `USERNAME`, `PASSWORD`, `TIMEOUT` (in seconds) and optionally `PORT` of the `DBConnection` class to achieve possibility of connection.
+The last thing you need to do is give Java2DB access to your database. You do this by passing
+a `ConnectionConfiguration` object into each service, thus telling it how to access your database.
 
 ## Features
 

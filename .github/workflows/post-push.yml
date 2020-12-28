@@ -3,6 +3,9 @@ name: Post-push actions
 # Run workflow only on commits to `master`
 on:
   push:
+    paths:
+      - '**.java'
+      - 'pom.xml'
     branches:
       - master
 
