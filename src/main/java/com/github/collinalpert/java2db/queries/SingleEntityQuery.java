@@ -23,16 +23,16 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	private static final TableModule tableModule = TableModule.getInstance();
 	protected final QueryParameters<E> queryParameters;
 	protected final IQueryBuilder<E> queryBuilder;
-	protected final ConnectionConfiguration connectionConfiguration;
+	protected final TransactionManager transactionManager;
 	private final Class<E> type;
 	private final Mappable<E> mapper;
 
-	public SingleEntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
+	public SingleEntityQuery(Class<E> type, TransactionManager transactionManager) {
 		this.type = type;
 		this.queryParameters = new QueryParameters<>();
 		this.mapper = IoC.resolveMapper(type, new EntityMapper<>(type));
 		this.queryBuilder = new SingleEntityQueryBuilder<>(type);
-		this.connectionConfiguration = connectionConfiguration;
+		this.transactionManager = transactionManager;
 	}
 
 	//region Configuration
@@ -70,7 +70,7 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
 		var queryBuilder = new ProjectionQueryBuilder<>(projection, this.getTableName(), (QueryBuilder<E>) this.queryBuilder);
 
-		return new SingleEntityProjectionQuery<>(returnType, queryBuilder, this.queryParameters, this.connectionConfiguration);
+		return new SingleEntityProjectionQuery<>(returnType, queryBuilder, this.queryParameters, this.transactionManager);
 	}
 
 	//endregion
@@ -83,8 +83,10 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public Optional<E> first() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.map(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.map(connection.execute(getQuery()));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
@@ -98,9 +100,11 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public List<E> toList() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			var mappedValue = this.mapper.map(connection.execute(getQuery()));
-			return mappedValue.map(Collections::singletonList).orElse(Collections.emptyList());
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var mappedValue = this.mapper.map(connection.execute(getQuery()));
+				return mappedValue.map(Collections::singletonList).orElse(Collections.emptyList());
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();
@@ -114,9 +118,11 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public Stream<E> toStream() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			var mappedValue = this.mapper.map(connection.execute(getQuery()));
-			return mappedValue.stream();
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var mappedValue = this.mapper.map(connection.execute(getQuery()));
+				return mappedValue.stream();
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Stream.empty();
@@ -131,15 +137,17 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	@Override
 	@SuppressWarnings("unchecked")
 	public E[] toArray() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			var mappedValue = this.mapper.map(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var mappedValue = this.mapper.map(connection.execute(getQuery()));
 
-			return mappedValue.map(v -> {
-				var array = (E[]) Array.newInstance(this.type, 1);
-				array[0] = v;
+				return mappedValue.map(v -> {
+					var array = (E[]) Array.newInstance(this.type, 1);
+					array[0] = v;
 
-				return array;
-			}).orElse((E[]) Array.newInstance(this.type, 0));
+					return array;
+				}).orElse((E[]) Array.newInstance(this.type, 0));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 
@@ -156,9 +164,11 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public <K, V> Map<K, V> toMap(Function<E, K> keyMapping, Function<E, V> valueMapping) {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			var mappedValue = this.mapper.map(connection.execute(getQuery()));
-			return mappedValue.map(v -> Collections.singletonMap(keyMapping.apply(v), valueMapping.apply(v))).orElse(Collections.emptyMap());
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var mappedValue = this.mapper.map(connection.execute(getQuery()));
+				return mappedValue.map(v -> Collections.singletonMap(keyMapping.apply(v), valueMapping.apply(v))).orElse(Collections.emptyMap());
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyMap();
@@ -172,9 +182,11 @@ public class SingleEntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public Set<E> toSet() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			var mappedValue = this.mapper.map(connection.execute(getQuery()));
-			return mappedValue.map(Collections::singleton).orElse(Collections.emptySet());
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var mappedValue = this.mapper.map(connection.execute(getQuery()));
+				return mappedValue.map(Collections::singleton).orElse(Collections.emptySet());
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptySet();

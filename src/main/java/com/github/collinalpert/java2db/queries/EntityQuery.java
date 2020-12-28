@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 
 	private static final TableModule tableModule = TableModule.getInstance();
-	protected final ConnectionConfiguration connectionConfiguration;
+	protected final TransactionManager transactionManager;
 	protected final IQueryBuilder<E> queryBuilder;
 	protected final QueryParameters<E> queryParameters;
 	private final Class<E> type;
@@ -39,9 +39,9 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 * @param type The entity to query.
 	 */
 
-	public EntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
+	public EntityQuery(Class<E> type, TransactionManager transactionManager) {
 		this.type = type;
-		this.connectionConfiguration = connectionConfiguration;
+		this.transactionManager = transactionManager;
 		this.queryParameters = new QueryParameters<>();
 		this.mapper = IoC.resolveMapper(type, new EntityMapper<>(type));
 		this.queryBuilder = new EntityQueryBuilder<>(type);
@@ -284,7 +284,7 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
 		var queryBuilder = new ProjectionQueryBuilder<>(projection, this.getTableName(), (QueryBuilder<E>) this.queryBuilder);
 
-		return new EntityProjectionQuery<>(returnType, queryBuilder, this.queryParameters, this.connectionConfiguration);
+		return new EntityProjectionQuery<>(returnType, queryBuilder, this.queryParameters, this.transactionManager);
 	}
 
 	/**
@@ -296,8 +296,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	@Override
 	public Optional<E> first() {
 		this.limit(1);
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.map(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.map(connection.execute(getQuery()));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
@@ -311,8 +313,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public List<E> toList() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.mapToList(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.mapToList(connection.execute(getQuery()));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyList();
@@ -326,8 +330,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public Stream<E> toStream() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.mapToStream(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.mapToStream(connection.execute(getQuery()));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Stream.empty();
@@ -342,8 +348,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	@Override
 	@SuppressWarnings("unchecked")
 	public E[] toArray() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.mapToArray(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.mapToArray(connection.execute(getQuery()));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return (E[]) Array.newInstance(this.type, 0);
@@ -359,8 +367,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public <K, V> Map<K, V> toMap(Function<E, K> keyMapping, Function<E, V> valueMapping) {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping);
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.mapToMap(connection.execute(getQuery()), keyMapping, valueMapping);
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Collections.emptyMap();
@@ -374,8 +384,10 @@ public class EntityQuery<E extends BaseEntity> implements Queryable<E> {
 	 */
 	@Override
 	public Set<E> toSet() {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			return this.mapper.mapToSet(connection.execute(getQuery()));
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				return this.mapper.mapToSet(connection.execute(getQuery()));
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 

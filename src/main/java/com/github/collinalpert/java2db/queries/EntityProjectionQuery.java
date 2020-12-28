@@ -23,24 +23,26 @@ public class EntityProjectionQuery<E extends BaseEntity, R> implements Queryable
 	private final Class<R> returnType;
 	private final IQueryBuilder<E> queryBuilder;
 	private final QueryParameters<E> queryParameters;
-	private final ConnectionConfiguration connectionConfiguration;
+	private final TransactionManager transactionManager;
 
-	public EntityProjectionQuery(Class<R> returnType, IQueryBuilder<E> queryBuilder, QueryParameters<E> queryParameters, ConnectionConfiguration connectionConfiguration) {
+	public EntityProjectionQuery(Class<R> returnType, IQueryBuilder<E> queryBuilder, QueryParameters<E> queryParameters, TransactionManager transactionManager) {
 		this.returnType = returnType;
 		this.queryBuilder = queryBuilder;
 		this.queryParameters = queryParameters;
-		this.connectionConfiguration = connectionConfiguration;
+		this.transactionManager = transactionManager;
 	}
 
 	@Override
 	public Optional<R> first() {
-		try (var connection = new DBConnection(this.connectionConfiguration);
-			 var result = connection.execute(getQuery())) {
-			if (result.next()) {
-				return Optional.ofNullable(result.getObject(1, this.returnType));
-			}
-
-			return Optional.empty();
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(getQuery());
+				if (result.next()) {
+					return Optional.ofNullable(result.getObject(1, this.returnType));
+				} else {
+					return Optional.empty();
+				}
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return Optional.empty();
@@ -106,13 +108,15 @@ public class EntityProjectionQuery<E extends BaseEntity, R> implements Queryable
 	 * @return A data structure containing a {@code ResultSet}s data.
 	 */
 	private <T, D> T resultHandling(D dataStructure, BiConsumer<D, R> valueConsumer, T defaultValue, Function<D, T> valueMapping) {
-		try (var connection = new DBConnection(this.connectionConfiguration);
-			 var result = connection.execute(getQuery())) {
-			while (result.next()) {
-				valueConsumer.accept(dataStructure, result.getObject(1, this.returnType));
-			}
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(getQuery());
+				while (result.next()) {
+					valueConsumer.accept(dataStructure, result.getObject(1, this.returnType));
+				}
 
-			return valueMapping.apply(dataStructure);
+				return valueMapping.apply(dataStructure);
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return defaultValue;

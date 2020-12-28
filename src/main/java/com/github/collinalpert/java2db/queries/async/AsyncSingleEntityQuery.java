@@ -1,7 +1,7 @@
 package com.github.collinalpert.java2db.queries.async;
 
 import com.github.collinalpert.expressions.expression.LambdaExpression;
-import com.github.collinalpert.java2db.database.ConnectionConfiguration;
+import com.github.collinalpert.java2db.database.TransactionManager;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.queries.*;
 import com.github.collinalpert.java2db.queries.builder.*;
@@ -12,8 +12,8 @@ import com.github.collinalpert.lambda2sql.functions.*;
  */
 public class AsyncSingleEntityQuery<E extends BaseEntity> extends SingleEntityQuery<E> implements AsyncQueryable<E> {
 
-	public AsyncSingleEntityQuery(Class<E> type, ConnectionConfiguration connectionConfiguration) {
-		super(type, connectionConfiguration);
+	public AsyncSingleEntityQuery(Class<E> type, TransactionManager transactionManager) {
+		super(type, transactionManager);
 	}
 
 	/**
@@ -52,6 +52,6 @@ public class AsyncSingleEntityQuery<E extends BaseEntity> extends SingleEntityQu
 		@SuppressWarnings("unchecked") var returnType = (Class<R>) LambdaExpression.parse(projection).getBody().getResultType();
 		var queryBuilder = new ProjectionQueryBuilder<>(projection, super.getTableName(), (QueryBuilder<E>) super.queryBuilder);
 
-		return new AsyncSingleEntityProjectionQuery<>(returnType, queryBuilder, super.queryParameters, super.connectionConfiguration);
+		return new AsyncSingleEntityProjectionQuery<>(returnType, queryBuilder, super.queryParameters, super.transactionManager);
 	}
 }

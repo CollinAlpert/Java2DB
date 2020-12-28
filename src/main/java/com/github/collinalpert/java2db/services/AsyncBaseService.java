@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.services;
 
-import com.github.collinalpert.java2db.database.ConnectionConfiguration;
+import com.github.collinalpert.java2db.database.TransactionManager;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.queries.async.*;
 import com.github.collinalpert.java2db.queries.ordering.OrderTypes;
@@ -24,8 +24,8 @@ import static com.github.collinalpert.java2db.utilities.Utilities.supplierHandli
  */
 public class AsyncBaseService<E extends BaseEntity> extends BaseService<E> {
 
-	protected AsyncBaseService(ConnectionConfiguration connectionConfiguration) {
-		super(connectionConfiguration);
+	protected AsyncBaseService(TransactionManager transactionManager) {
+		super(transactionManager);
 	}
 
 	//region Create
@@ -253,11 +253,11 @@ public class AsyncBaseService<E extends BaseEntity> extends BaseService<E> {
 	//region Query
 
 	protected AsyncEntityQuery<E> createAsyncQuery() {
-		return new AsyncEntityQuery<>(super.type, super.connectionConfiguration);
+		return new AsyncEntityQuery<>(super.type, super.transactionManager);
 	}
 
 	protected AsyncSingleEntityQuery<E> createAsyncSingleQuery() {
-		return new AsyncSingleEntityQuery<>(super.type, super.connectionConfiguration);
+		return new AsyncSingleEntityQuery<>(super.type, super.transactionManager);
 	}
 
 	/**

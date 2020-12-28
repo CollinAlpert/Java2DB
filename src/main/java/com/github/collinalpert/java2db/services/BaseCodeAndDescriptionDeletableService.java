@@ -1,6 +1,6 @@
 package com.github.collinalpert.java2db.services;
 
-import com.github.collinalpert.java2db.database.ConnectionConfiguration;
+import com.github.collinalpert.java2db.database.TransactionManager;
 import com.github.collinalpert.java2db.entities.BaseCodeAndDescriptionDeletableEntity;
 import com.github.collinalpert.java2db.queries.EntityQuery;
 
@@ -15,8 +15,8 @@ import java.util.Optional;
  */
 public class BaseCodeAndDescriptionDeletableService<T extends BaseCodeAndDescriptionDeletableEntity> extends BaseDeletableService<T> {
 
-	protected BaseCodeAndDescriptionDeletableService(ConnectionConfiguration connectionConfiguration) {
-		super(connectionConfiguration);
+	protected BaseCodeAndDescriptionDeletableService(TransactionManager transactionManager) {
+		super(transactionManager);
 	}
 
 	/**
