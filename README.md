@@ -27,7 +27,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>6.0.0</version>
+    <version>6.0.1</version>
 </dependency>
 ```
 
@@ -103,8 +103,10 @@ public class Person extends BaseEntity {
 ```
 
 Every POJO *must* extend `BaseEntity` and have an empty or default constructor.\
-The class `BaseEntity` overrides the `equals` and `hashCode` methods using the `id`. Override them in your entity classes if you need different behavior.\
-If you want to have a field in your POJO that should be ignored by Java2DB, you can apply the `Ignore` attribute to the specific field.
+The class `BaseEntity` overrides the `equals` and `hashCode` methods using the `id`. Override them in your entity
+classes if you need different behavior.\
+If you want to have a field in your POJO that should be ignored by Java2DB, you can apply the `Ignore` attribute or
+the `transient` modifier to the specific field.
 
 Then we can go ahead and create the service classes:
 
@@ -144,7 +146,7 @@ the [Asynchronous operations](#asynchronous-operations) section.
 #### Read
 
 The `BaseService` provides a `createQuery` method which allows you to manually build a query and then execute it with
-the `toList`, `toStream`, `toArray` or `toMap` methods. You should only need this approach seldomly.\
+the `toList`, `toStream`, `toArray` or `toMap` methods. You should only need this approach seldom.\
 Much rather, use the `getSingle` or `getMultiple` methods. `getMultiple` returns an `EntityQuery` object with a
 preconfigured WHERE condition and then allows you to chain some additional query options. As of the
 current `EntityQuery` version, WHERE, LIMIT, ORDER BY and GROUP BY are supported. Effectively, the
@@ -231,7 +233,11 @@ You can also check if a table has at least one row by calling `personService.any
 To check if a column's values are unique in a table, use the `hasDuplicates` method provided by the `BaseService`. It will return `true` if there is at least one duplicate value and false if all the values are unique.
 
 ### Programmability
-The `DBConnection` class offers the possibility to call a stored procedure and a function. Simply use the `callStoredProcedure` or `callFunction` method, respectively and pass in the class you would like the result mapped to. Using the `@Ignore` annotation will also work with these kinds of calls. Please make sure your class has an empty constructor.   
+
+The `DBConnection` class offers the possibility to call a stored procedure and a function. Simply use
+the `callStoredProcedure` or `callFunction` method, respectively and pass in the class you would like the result mapped
+to. Using the `@Ignore` annotation or the `transient` modifier will also work with these kinds of calls. Please make
+sure your class has an empty constructor.
 
 ### Asynchronous operations
 

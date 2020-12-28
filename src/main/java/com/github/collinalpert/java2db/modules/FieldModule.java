@@ -5,7 +5,7 @@ import com.github.collinalpert.java2db.database.*;
 import com.github.collinalpert.java2db.entities.BaseEntity;
 import com.github.collinalpert.java2db.utilities.Utilities;
 
-import java.lang.reflect.Field;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -57,7 +57,7 @@ public class FieldModule {
 		var fields = new LinkedList<Field>();
 		do {
 			Arrays.stream(instanceClass.getDeclaredFields())
-					.filter(field -> field.getAnnotation(Ignore.class) == null && (includeForeignKeys || field.getAnnotation(ForeignKeyEntity.class) == null))
+					.filter(field -> field.getAnnotation(Ignore.class) == null && !Modifier.isTransient(field.getModifiers()) && (includeForeignKeys || field.getAnnotation(ForeignKeyEntity.class) == null))
 					.forEach(fields::add);
 			instanceClass = instanceClass.getSuperclass();
 		} while (instanceClass != delimiter);
@@ -118,7 +118,7 @@ public class FieldModule {
 	public List<Field> getAllFields(Class<?> clazz) {
 		var list = new LinkedList<Field>();
 		do {
-			Arrays.stream(clazz.getDeclaredFields()).filter(x -> x.getAnnotation(Ignore.class) == null).forEach(list::add);
+			Arrays.stream(clazz.getDeclaredFields()).filter(x -> x.getAnnotation(Ignore.class) == null && !Modifier.isTransient(x.getModifiers())).forEach(list::add);
 			clazz = clazz.getSuperclass();
 		} while (clazz != Object.class);
 
