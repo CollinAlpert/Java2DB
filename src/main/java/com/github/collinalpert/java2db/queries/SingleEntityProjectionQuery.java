@@ -22,13 +22,13 @@ public class SingleEntityProjectionQuery<E extends BaseEntity, R> implements Que
 	private final Class<R> returnType;
 	private final IQueryBuilder<E> queryBuilder;
 	private final QueryParameters<E> queryParameters;
-	private final ConnectionConfiguration connectionConfiguration;
+	private final TransactionManager transactionManager;
 
-	public SingleEntityProjectionQuery(Class<R> returnType, ProjectionQueryBuilder<E, R> queryBuilder, QueryParameters<E> queryParameters, ConnectionConfiguration connectionConfiguration) {
+	public SingleEntityProjectionQuery(Class<R> returnType, ProjectionQueryBuilder<E, R> queryBuilder, QueryParameters<E> queryParameters, TransactionManager transactionManager) {
 		this.returnType = returnType;
 		this.queryBuilder = queryBuilder;
 		this.queryParameters = queryParameters;
-		this.connectionConfiguration = connectionConfiguration;
+		this.transactionManager = transactionManager;
 	}
 
 	@Override
@@ -106,13 +106,15 @@ public class SingleEntityProjectionQuery<E extends BaseEntity, R> implements Que
 	}
 
 	private <D> D resultHandling(Function<R, D> valueConsumer, Supplier<D> defaultValueFactory) {
-		try (var connection = new DBConnection(this.connectionConfiguration);
-			 var result = connection.execute(getQuery())) {
-			if (result.next()) {
-				return valueConsumer.apply(result.getObject(1, this.returnType));
-			}
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(getQuery());
+				if (result.next()) {
+					return valueConsumer.apply(result.getObject(1, this.returnType));
+				}
 
-			return defaultValueFactory.get();
+				return defaultValueFactory.get();
+			});
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return defaultValueFactory.get();

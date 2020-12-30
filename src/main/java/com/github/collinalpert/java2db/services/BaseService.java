@@ -56,15 +56,15 @@ public class BaseService<E extends BaseEntity> {
 	private final String idAccess;
 
 	/**
-	 * The properties this service needs to access the database.
+	 * The transaction manager for the data source this service operates on.
 	 */
-	protected final ConnectionConfiguration connectionConfiguration;
+	protected final TransactionManager transactionManager;
 
 	/**
 	 * Constructor for the base class of all services. It is not possible to create instances of it.
 	 */
-	protected BaseService(ConnectionConfiguration connectionConfiguration) {
-		this.connectionConfiguration = connectionConfiguration;
+	protected BaseService(TransactionManager transactionManager) {
+		this.transactionManager = transactionManager;
 		this.type = getGenericType();
 		this.tableName = tableModule.getTableName(this.type);
 
@@ -98,11 +98,11 @@ public class BaseService<E extends BaseEntity> {
 		//For using the default database setting for the id.
 		joiner.add("default");
 		insertQuery.append(joiner.toString());
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		return transactionManager.transactAndReturn(connection -> {
 			var id = connection.update(insertQuery.toString());
 			instance.setId(id);
 			return id;
-		}
+		});
 	}
 
 	/**
@@ -155,9 +155,9 @@ public class BaseService<E extends BaseEntity> {
 		}
 
 		insertQuery.append(String.join(", ", rows));
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(insertQuery.toString());
-		}
+		});
 	}
 
 	//endregion
@@ -183,14 +183,15 @@ public class BaseService<E extends BaseEntity> {
 	 * @return The number of rows matching the condition.
 	 */
 	public int count(SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			try (var result = connection.execute(String.format("select count(%s) from `%s` where %s;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(String.format("select count(%s) from `%s` where %s;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 				if (result.next()) {
 					return result.getInt(String.format("count(%s)", this.idAccess));
 				}
 
 				return 0;
-			}
+			});
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(String.format("Could not get amount of rows in table %s for this predicate.", this.tableName), e);
 		}
@@ -216,14 +217,15 @@ public class BaseService<E extends BaseEntity> {
 	 * @return {@code True} if the predicate matches one or more records, {@code false} if not.
 	 */
 	public boolean any(SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			try (var result = connection.execute(String.format("select exists(select %s from `%s` where %s limit 1) as result;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(String.format("select exists(select %s from `%s` where %s limit 1) as result;", this.idAccess, this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 				if (result.next()) {
 					return result.getInt("result") == 1;
 				}
 
 				return false;
-			}
+			});
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(String.format("Could not check if a row matches this condition on table %s.", this.tableName), e);
 		}
@@ -253,8 +255,9 @@ public class BaseService<E extends BaseEntity> {
 	 * @return The maximum value of the column.
 	 */
 	public <T> T max(SqlFunction<E, T> column, SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			try (var result = connection.execute(String.format("select max(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(String.format("select max(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 				if (result.next()) {
 					// This is needed to find the generic type at runtime.
 
@@ -262,7 +265,7 @@ public class BaseService<E extends BaseEntity> {
 				}
 
 				return null;
-			}
+			});
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(String.format("Could not get maximum value of column %s in table %s.", Lambda2Sql.toSql(column), this.tableName), e);
 		}
@@ -294,14 +297,15 @@ public class BaseService<E extends BaseEntity> {
 	 * @return The minimum value of the column.
 	 */
 	public <T> T min(SqlFunction<E, T> column, SqlPredicate<E> predicate) {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			try (var result = connection.execute(String.format("select min(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)))) {
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(String.format("select min(%s) from `%s` where %s;", Lambda2Sql.toSql(column, this.tableName), this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
 				if (result.next()) {
 					return (T) result.getObject(1);
 				}
 
 				return null;
-			}
+			});
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(String.format("Could not get minimum value of column %s in table %s.", Lambda2Sql.toSql(column), this.tableName), e);
 		}
@@ -319,10 +323,11 @@ public class BaseService<E extends BaseEntity> {
 	 */
 	public boolean hasDuplicates(SqlFunction<E, ?> column) {
 		var sqlColumn = Lambda2Sql.toSql(column, this.tableName);
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
-			try (var result = connection.execute(String.format("select %s from `%s` group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn))) {
+		try {
+			return transactionManager.transactAndReturn(connection -> {
+				var result = connection.execute(String.format("select %s from `%s` group by %s having count(%s) > 1", sqlColumn, this.tableName, sqlColumn, sqlColumn));
 				return result.next();
-			}
+			});
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(String.format("Could not check if duplicate values exist in column %s on table %s.", sqlColumn, this.tableName), e);
 		}
@@ -338,7 +343,7 @@ public class BaseService<E extends BaseEntity> {
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected EntityQuery<E> createQuery() {
-		return new EntityQuery<>(this.type, this.connectionConfiguration);
+		return new EntityQuery<>(this.type, this.transactionManager);
 	}
 
 	/**
@@ -347,7 +352,7 @@ public class BaseService<E extends BaseEntity> {
 	 * {@link #getSingle(SqlPredicate)}, {@link #getMultiple(SqlPredicate)} or {@link #getAll()} methods.
 	 */
 	protected SingleEntityQuery<E> createSingleQuery() {
-		return new SingleEntityQuery<>(this.type, this.connectionConfiguration);
+		return new SingleEntityQuery<>(this.type, this.transactionManager);
 	}
 
 	/**
@@ -517,9 +522,9 @@ public class BaseService<E extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(E instance) throws SQLException {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		this.transactionManager.transact(connection -> {
 			connection.update(updateQuery(instance));
-		}
+		});
 	}
 
 	/**
@@ -544,11 +549,11 @@ public class BaseService<E extends BaseEntity> {
 	 *                      i.e. non-existing default value for field or an incorrect data type.
 	 */
 	public void update(List<E> instances) throws SQLException {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			for (E instance : instances) {
 				connection.update(updateQuery(instance));
 			}
-		}
+		});
 	}
 
 	private String updateQuery(E instance) {
@@ -577,9 +582,9 @@ public class BaseService<E extends BaseEntity> {
 		SqlPredicate<E> predicate = x -> x.getId() == entityId;
 		var query = String.format("update `%s` set %s = %s where %s", this.tableName, Lambda2Sql.toSql(column, this.tableName), Lambda2Sql.toSql(newValueFunction, this.tableName), Lambda2Sql.toSql(predicate, this.tableName));
 
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(query);
-		}
+		});
 	}
 
 	/**
@@ -611,9 +616,9 @@ public class BaseService<E extends BaseEntity> {
 	public <R> void update(SqlPredicate<E> condition, SqlFunction<E, R> column, R newValue) throws SQLException {
 		var query = String.format("update `%s` set %s = %s where %s;", this.tableName, Lambda2Sql.toSql(column, this.tableName), convertToSql(newValue), Lambda2Sql.toSql(condition, this.tableName));
 
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(query);
-		}
+		});
 	}
 
 	//endregion
@@ -654,9 +659,9 @@ public class BaseService<E extends BaseEntity> {
 		}
 
 		var joinedIds = joiner.toString();
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(String.format("delete from `%s` where %s in %s", this.tableName, this.idAccess, joinedIds));
-		}
+		});
 	}
 
 	/**
@@ -693,9 +698,9 @@ public class BaseService<E extends BaseEntity> {
 	 * @throws SQLException in case the condition cannot be applied or if a foreign key constraint fails.
 	 */
 	public void delete(SqlPredicate<E> predicate) throws SQLException {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(String.format("delete from `%s` where %s;", this.tableName, Lambda2Sql.toSql(predicate, this.tableName)));
-		}
+		});
 	}
 
 	/**
@@ -706,9 +711,9 @@ public class BaseService<E extends BaseEntity> {
 	 *                      command and cannot check if rows are being referenced or not.
 	 */
 	public void truncateTable() throws SQLException {
-		try (var connection = new DBConnection(this.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(String.format("truncate table `%s`;", this.tableName));
-		}
+		});
 	}
 
 	//endregion

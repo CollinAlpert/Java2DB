@@ -19,8 +19,8 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 
 	private final SqlFunction<T, Boolean> isDeletedFunc = BaseDeletableEntity::isDeleted;
 
-	protected BaseDeletableService(ConnectionConfiguration connectionConfiguration) {
-		super(connectionConfiguration);
+	protected BaseDeletableService(TransactionManager transactionManager) {
+		super(transactionManager);
 	}
 
 	/**
@@ -59,9 +59,9 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 		}
 
 		var joinedIds = joiner.toString();
-		try (var connection = new DBConnection(super.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(String.format("update `%s` set %s = 1 where `%s`.`id` in %s", this.tableName, Lambda2Sql.toSql(this.isDeletedFunc, this.tableName), this.tableName, joinedIds));
-		}
+		});
 	}
 
 	/**
@@ -101,8 +101,8 @@ public class BaseDeletableService<T extends BaseDeletableEntity> extends BaseSer
 	@Override
 	public void delete(SqlPredicate<T> predicate) throws SQLException {
 		var query = String.format("update %s set %s = 1 where %s", super.tableName, Lambda2Sql.toSql(this.isDeletedFunc, super.tableName), Lambda2Sql.toSql(predicate));
-		try (var connection = new DBConnection(super.connectionConfiguration)) {
+		transactionManager.transact(connection -> {
 			connection.update(query);
-		}
+		});
 	}
 }
