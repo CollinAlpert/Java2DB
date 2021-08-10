@@ -11,8 +11,10 @@ please let me know.
 If you are completely lost or have no idea how to use this library (or both), feel free
 to [contact me](mailto:collinalpert@gmail.com). I would be happy to assist you with any problems you might have.
 
-**Please note:** This is a Java 13 library. Make sure you have Java 13 installed when using this library. This library is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.\
-It is meant for projects which want to interact with their database in a simple, but easy way, without bloating the source code with SQL queries.
+**Please note:** This is a Java 11 library. Make sure you have Java 13 installed when using this library. This library
+is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.\
+It is meant for projects which want to interact with their database in a simple, but easy way, without bloating the
+source code with SQL queries.
 
 ## Introduction
 POJOs imitate tables on the database where every field in the POJO is equivalent to a table column. Every class has a corresponding service class, which acts as a data service and interacts with the database. It is possible to define custom methods in the respective service classes to retrieve specific data. The service classes will fill the POJO with values from the database using a default mapper. The mapping functionality is explained [further down](#custom-mapping).\

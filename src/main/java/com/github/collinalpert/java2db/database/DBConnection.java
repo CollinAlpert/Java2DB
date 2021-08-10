@@ -5,7 +5,6 @@ import com.github.collinalpert.java2db.mappers.FieldMapper;
 import com.github.collinalpert.java2db.queries.*;
 import com.github.collinalpert.java2db.queries.async.*;
 import com.mysql.cj.exceptions.CJCommunicationsException;
-import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 
 import java.io.Closeable;
 import java.sql.*;
@@ -28,24 +27,28 @@ public class DBConnection implements Closeable {
 	 */
 	public static boolean LOG_QUERIES = true;
 
-	private Connection underlyingConnection;
+	static {
+		try {
+			Class.forName("com.mysql.cj.jdbc.Driver");
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private final Connection underlyingConnection;
 	private boolean isConnectionValid;
 
 	public DBConnection(ConnectionConfiguration configuration) {
 		try {
 			var connectionString = String.format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true", configuration.getHost(), configuration.getPort(), configuration.getDatabase());
-			Class.forName("com.mysql.cj.jdbc.Driver");
 			System.setProperty("user", configuration.getUsername());
 			System.setProperty("password", configuration.getPassword());
 			DriverManager.setLoginTimeout(configuration.getTimeout());
 			underlyingConnection = DriverManager.getConnection(connectionString, System.getProperties());
 			isConnectionValid = true;
-		} catch (CJCommunicationsException | CommunicationsException e) {
+		} catch (CJCommunicationsException | SQLException e) {
 			isConnectionValid = false;
-			throw new ConnectionFailedException();
-		} catch (ClassNotFoundException | SQLException e) {
-			e.printStackTrace();
-			isConnectionValid = false;
+			throw new ConnectionFailedException(e);
 		}
 	}
 
@@ -181,7 +184,7 @@ public class DBConnection implements Closeable {
 			joiner.add("?");
 		}
 
-		try (var set = execute(String.format("select %s(%s);", functionName, joiner.toString()), arguments)) {
+		try (var set = execute(String.format("select %s(%s);", functionName, joiner), arguments)) {
 			return new FieldMapper<>(returnType).map(set);
 		}
 	}

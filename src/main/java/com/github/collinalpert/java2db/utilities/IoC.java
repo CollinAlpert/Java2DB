@@ -18,7 +18,6 @@ public final class IoC {
 	private static final Map<Class<? extends BaseEntity>, BaseService<? extends BaseEntity>> services;
 	private static final Map<Class<? extends BaseEntity>, Mappable<? extends BaseEntity>> mappers;
 
-
 	static {
 		services = new HashMap<>();
 		mappers = new HashMap<>();
