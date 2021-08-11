@@ -11,7 +11,7 @@ please let me know.
 If you are completely lost or have no idea how to use this library (or both), feel free
 to [contact me](mailto:collinalpert@gmail.com). I would be happy to assist you with any problems you might have.
 
-**Please note:** This is a Java 11 library. Make sure you have Java 13 installed when using this library. This library
+**Please note:** This is a Java 11 library. Make sure you have Java 11 installed when using this library. This library
 is not suitable for projects requiring complex SQL queries, although it does offer some advanced features.\
 It is meant for projects which want to interact with their database in a simple, but easy way, without bloating the
 source code with SQL queries.
@@ -29,7 +29,7 @@ Include the Maven artifact:
 <dependency>
     <groupId>com.github.collinalpert</groupId>
     <artifactId>java2db</artifactId>
-    <version>6.0.1</version>
+    <version>6.1.0</version>
 </dependency>
 ```
 
@@ -89,7 +89,7 @@ public class Person extends BaseEntity {
 	
 	private String name;
 	private int age;
-	private long genderId;
+	private int genderId;
 	
 	// When annotating a field with the @ForeignKeyEntity attribute,
 	// you are telling Java2DB that this is a POJO that depicts the
